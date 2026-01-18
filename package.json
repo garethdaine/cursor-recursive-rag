@@ -1,6 +1,6 @@
 {
   "name": "cursor-recursive-rag",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "description": "Recursive RAG MCP server for Cursor IDE with interactive setup",
   "type": "module",
   "bin": {

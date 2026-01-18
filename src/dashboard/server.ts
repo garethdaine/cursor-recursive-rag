@@ -18,6 +18,9 @@ interface DashboardStats {
   sources: Array<{ name: string; chunks: number }>;
   proxyEnabled: boolean;
   firecrawlConfigured: boolean;
+  mcpGatewayEnabled: boolean;
+  mcpGatewayUrl: string | null;
+  openSkillsEnabled: boolean;
   lastUpdated: string;
 }
 
@@ -73,6 +76,9 @@ async function getStats(): Promise<DashboardStats> {
       sources: [], // Would need to implement source tracking
       proxyEnabled: config.proxy?.enabled || false,
       firecrawlConfigured: !!config.apiKeys?.firecrawl,
+      mcpGatewayEnabled: config.mcpGateway?.enabled || false,
+      mcpGatewayUrl: config.mcpGateway?.url || null,
+      openSkillsEnabled: config.openSkills?.enabled || false,
       lastUpdated: new Date().toISOString()
     };
   } catch (error) {
@@ -83,6 +89,9 @@ async function getStats(): Promise<DashboardStats> {
       sources: [],
       proxyEnabled: false,
       firecrawlConfigured: false,
+      mcpGatewayEnabled: false,
+      mcpGatewayUrl: null,
+      openSkillsEnabled: false,
       lastUpdated: new Date().toISOString()
     };
   }

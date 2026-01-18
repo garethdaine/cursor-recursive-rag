@@ -33,6 +33,18 @@ export interface SearchOptions {
   filter?: Record<string, any>;
 }
 
+export interface MCPGatewayConfig {
+  enabled: boolean;
+  url: string;
+  apiKey?: string;
+}
+
+export interface OpenSkillsConfig {
+  enabled: boolean;
+  autoIngestSkills: boolean;
+  skillPaths?: string[];
+}
+
 export interface RAGConfig {
   vectorStore: 'chroma' | 'qdrant' | 'vectorize';
   embeddings: 'xenova' | 'openai' | 'ollama';
@@ -58,6 +70,8 @@ export interface RAGConfig {
       password: string;
     };
   };
+  mcpGateway?: MCPGatewayConfig;
+  openSkills?: OpenSkillsConfig;
 }
 
 export interface ChunkOptions {

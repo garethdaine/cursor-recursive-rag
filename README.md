@@ -12,6 +12,8 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web da
 - **Web Dashboard**: Real-time monitoring, search, and configuration UI (Tailwind CSS)
 - **Interactive Setup**: Guided configuration wizard
 - **MCP Integration**: Automatic registration with Cursor IDE
+- **MCP Gateway Integration**: Connect to [MCP Gateway](https://github.com/abdullah1854/MCPGateway) for 87+ aggregated tools with token optimization
+- **OpenSkills Integration**: Auto-discover and ingest skills from [OpenSkills](https://github.com/numman-ali/openskills) for semantic search
 
 ## Quick Start
 
@@ -193,6 +195,51 @@ The optional rotating proxy is used for direct URL fetching (not needed when usi
 
 - **PacketStream**: Residential proxies with country targeting
 - **SmartProxy**: Datacenter and residential options
+
+### MCP Gateway Integration
+
+Connect to [MCP Gateway](https://github.com/abdullah1854/MCPGateway) to access 87+ aggregated tools with token optimization:
+
+```json
+{
+  "mcpGateway": {
+    "enabled": true,
+    "url": "http://localhost:3010",
+    "apiKey": "optional-api-key"
+  }
+}
+```
+
+**MCP Tools exposed:**
+- `gateway_search_tools` - Search available tools across all backends
+- `gateway_call_tool` - Call any gateway tool with result filtering
+- `gateway_execute_skill` - Execute gateway skills
+- `gateway_health` - Check gateway status
+
+### OpenSkills Integration
+
+Connect to [OpenSkills](https://github.com/numman-ali/openskills) for universal skills loading:
+
+```json
+{
+  "openSkills": {
+    "enabled": true,
+    "autoIngestSkills": true
+  }
+}
+```
+
+**MCP Tools exposed:**
+- `list_openskills` - List all installed skills
+- `read_openskill` - Read a specific skill's content
+- `ingest_openskills` - Ingest all skills into RAG knowledge base
+- `search_openskills` - Semantic search across ingested skills
+
+**Skill Discovery Paths (priority order):**
+1. `./.agent/skills/` (project universal)
+2. `~/.agent/skills/` (global universal)
+3. `./.claude/skills/` (project Claude)
+4. `~/.claude/skills/` (global Claude)
 
 The MCP server is registered in `~/.cursor/mcp.json`:
 

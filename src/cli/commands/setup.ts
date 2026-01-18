@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { writeConfig, registerWithCursor } from '../../services/config.js';
-import type { RAGConfig, ProxyConfig } from '../../types/index.js';
+import type { RAGConfig, ProxyConfig, MCPGatewayConfig, OpenSkillsConfig } from '../../types/index.js';
 
 export const setupCommand = new Command('setup')
   .description('Interactive setup wizard')
@@ -24,10 +24,13 @@ export const setupCommand = new Command('setup')
     // Step 4: Proxy Configuration (optional)
     const proxy = await promptProxy();
 
-    // Step 5: Validate connections
+    // Step 5: Integrations (optional)
+    const { mcpGateway, openSkills } = await promptIntegrations();
+
+    // Step 6: Validate connections
     const spinner = ora('Validating configuration...').start();
     try {
-      await validateConfig({ vectorStore, embeddings, apiKeys, proxy });
+      await validateConfig({ vectorStore, embeddings, apiKeys, proxy, mcpGateway, openSkills });
       spinner.succeed('Configuration validated');
     } catch (error) {
       spinner.fail(`Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -35,7 +38,7 @@ export const setupCommand = new Command('setup')
       process.exit(1);
     }
 
-    // Step 6: Write config
+    // Step 7: Write config
     const config: RAGConfig = {
       vectorStore: vectorStore as 'chroma' | 'qdrant' | 'vectorize',
       embeddings: embeddings as 'xenova' | 'openai' | 'ollama',
@@ -44,11 +47,13 @@ export const setupCommand = new Command('setup')
       dashboard: {
         enabled: true,
         port: 3333
-      }
+      },
+      mcpGateway,
+      openSkills
     };
     writeConfig(config);
 
-    // Step 7: Register with Cursor
+    // Step 8: Register with Cursor
     try {
       await registerWithCursor();
       console.log(chalk.green('✅ MCP server registered with Cursor'));
@@ -246,6 +251,68 @@ async function promptProxy(): Promise<ProxyConfig> {
   };
 }
 
+async function promptIntegrations(): Promise<{ mcpGateway: MCPGatewayConfig; openSkills: OpenSkillsConfig }> {
+  console.log(chalk.cyan('\n📦 Optional Integrations\n'));
+
+  // MCP Gateway
+  const { useMcpGateway } = await inquirer.prompt([{
+    type: 'confirm',
+    name: 'useMcpGateway',
+    message: 'Enable MCP Gateway integration? (aggregates 87+ tools with token optimization)',
+    default: false
+  }]);
+
+  let mcpGateway: MCPGatewayConfig = { enabled: false, url: 'http://localhost:3010' };
+
+  if (useMcpGateway) {
+    const { gatewayUrl } = await inquirer.prompt([{
+      type: 'input',
+      name: 'gatewayUrl',
+      message: 'MCP Gateway URL:',
+      default: 'http://localhost:3010'
+    }]);
+
+    const { gatewayApiKey } = await inquirer.prompt([{
+      type: 'password',
+      name: 'gatewayApiKey',
+      message: 'Gateway API key (optional, press Enter to skip):',
+      default: ''
+    }]);
+
+    mcpGateway = {
+      enabled: true,
+      url: gatewayUrl,
+      apiKey: gatewayApiKey || undefined
+    };
+  }
+
+  // OpenSkills
+  const { useOpenSkills } = await inquirer.prompt([{
+    type: 'confirm',
+    name: 'useOpenSkills',
+    message: 'Enable OpenSkills integration? (universal skills loader for AI agents)',
+    default: false
+  }]);
+
+  let openSkills: OpenSkillsConfig = { enabled: false, autoIngestSkills: false };
+
+  if (useOpenSkills) {
+    const { autoIngest } = await inquirer.prompt([{
+      type: 'confirm',
+      name: 'autoIngest',
+      message: 'Auto-ingest installed skills into RAG knowledge base?',
+      default: true
+    }]);
+
+    openSkills = {
+      enabled: true,
+      autoIngestSkills: autoIngest
+    };
+  }
+
+  return { mcpGateway, openSkills };
+}
+
 async function validateConfig(config: RAGConfig): Promise<void> {
   // Basic validation - can be expanded later
   if (!config.vectorStore || !config.embeddings) {
@@ -260,6 +327,13 @@ async function validateConfig(config: RAGConfig): Promise<void> {
   if (config.proxy?.enabled) {
     if (!config.proxy.username || !config.proxy.password) {
       throw new Error('Proxy username and password are required when proxy is enabled');
+    }
+  }
+
+  // Validate MCP Gateway if enabled
+  if (config.mcpGateway?.enabled) {
+    if (!config.mcpGateway.url) {
+      throw new Error('MCP Gateway URL is required when integration is enabled');
     }
   }
 

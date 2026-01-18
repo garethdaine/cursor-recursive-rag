@@ -1,6 +1,7 @@
 # cursor-recursive-rag
 
-[![Version](https://img.shields.io/badge/version-0.2.0--alpha.1-blue.svg)](https://github.com/garethdaine/cursor-recursive-rag/releases)
+[![npm version](https://img.shields.io/npm/v/cursor-recursive-rag.svg)](https://www.npmjs.com/package/cursor-recursive-rag)
+[![npm downloads](https://img.shields.io/npm/dm/cursor-recursive-rag.svg)](https://www.npmjs.com/package/cursor-recursive-rag)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org)
 
@@ -24,10 +25,8 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web da
 ## Quick Start
 
 ```bash
-# Clone and install
-git clone https://github.com/garethdaine/cursor-recursive-rag.git
-cd cursor-recursive-rag
-npm install && npm run build && npm link
+# Install globally
+npm install -g cursor-recursive-rag
 
 # Run interactive setup
 cursor-rag setup
@@ -50,7 +49,13 @@ cursor-rag dashboard
 
 ## Installation
 
-### From GitHub (recommended)
+### From npm (recommended)
+
+```bash
+npm install -g cursor-recursive-rag
+```
+
+### From source
 
 ```bash
 git clone https://github.com/garethdaine/cursor-recursive-rag.git
@@ -58,13 +63,6 @@ cd cursor-recursive-rag
 npm install
 npm run build
 npm link  # Makes cursor-rag available globally
-```
-
-### From npm (coming soon)
-
-```bash
-# Not yet published
-npm install -g cursor-recursive-rag
 ```
 
 ## Setup Wizard

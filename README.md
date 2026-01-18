@@ -11,7 +11,7 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web da
 ## Features
 
 - **Recursive Query**: Multi-hop retrieval with query decomposition and iterative refinement
-- **Configurable Vector Stores**: ChromaDB (local), Qdrant (local/cloud), Cloudflare Vectorize
+- **Configurable Vector Stores**: Redis Stack (recommended), Qdrant (local/cloud), ChromaDB, Cloudflare Vectorize
 - **Configurable Embeddings**: Local (Xenova/transformers.js), OpenAI, Ollama
 - **Web Crawling**: Firecrawl integration for documentation ingestion
 - **Rotating Proxy Support**: Optional PacketStream/SmartProxy integration for URL fetching
@@ -69,8 +69,10 @@ npm link  # Makes cursor-rag available globally
 Run `cursor-rag setup` to configure the system. The wizard will:
 
 1. **Select Vector Store**:
-   - **ChromaDB (local)**: Zero setup, runs in-process, good for development
-   - **Qdrant**: Better performance, supports local Docker or cloud
+   - **Memory**: In-process, zero setup, non-persistent (good for testing)
+   - **Redis Stack** (recommended): Persistent, fast HNSW search, `docker run -p 6379:6379 redis/redis-stack-server`
+   - **Qdrant**: Persistent, local Docker or cloud
+   - **ChromaDB**: Requires separate server, `docker run -p 8000:8000 chromadb/chroma`
    - **Cloudflare Vectorize**: Serverless (not yet implemented)
 
 2. **Select Embedding Model**:

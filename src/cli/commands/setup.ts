@@ -76,10 +76,11 @@ async function promptVectorStore(): Promise<string> {
     name: 'vectorStore',
     message: 'Select vector store:',
     choices: [
-      { name: 'Memory (file-based, zero setup, recommended for testing)', value: 'memory' },
-      { name: 'ChromaDB (requires Docker: docker run -p 8000:8000 chromadb/chroma)', value: 'chroma' },
-      { name: 'Qdrant (local Docker or cloud)', value: 'qdrant' },
-      { name: 'Cloudflare Vectorize (serverless)', value: 'vectorize' }
+      { name: 'Memory (in-process, zero setup, non-persistent)', value: 'memory' },
+      { name: 'Redis Stack (persistent, fast HNSW search) - docker run -p 6379:6379 redis/redis-stack-server', value: 'redis' },
+      { name: 'Qdrant (persistent, local Docker or cloud)', value: 'qdrant' },
+      { name: 'ChromaDB (requires separate server) - docker run -p 8000:8000 chromadb/chroma', value: 'chroma' },
+      { name: 'Cloudflare Vectorize (serverless, requires Cloudflare account)', value: 'vectorize' }
     ]
   }]);
   return vectorStore;
@@ -139,6 +140,20 @@ async function promptApiKeys(vectorStore: string, embeddings: string): Promise<R
       }
     }]);
     apiKeys.firecrawl = firecrawlKey;
+  }
+
+  // Redis configuration (if using Redis)
+  if (vectorStore === 'redis') {
+    const { redisUrl } = await inquirer.prompt([{
+      type: 'input',
+      name: 'redisUrl',
+      message: 'Redis URL (default: redis://localhost:6379):',
+      default: 'redis://localhost:6379'
+    }]);
+
+    apiKeys.redis = {
+      url: redisUrl
+    };
   }
 
   // Qdrant configuration (if using Qdrant)

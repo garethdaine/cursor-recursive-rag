@@ -3,6 +3,7 @@ import { ChromaAdapter } from './chroma.js';
 import { QdrantAdapter } from './qdrant.js';
 import { VectorizeAdapter } from './vectorize.js';
 import { MemoryAdapter } from './memory.js';
+import { RedisAdapter } from './redis.js';
 import type { RAGConfig } from '../../types/index.js';
 
 export { VectorStore, VectorDocument, SearchResult, SearchOptions };
@@ -15,6 +16,8 @@ export function createVectorStore(type: string, config: RAGConfig): VectorStore 
       return new ChromaAdapter(config);
     case 'qdrant':
       return new QdrantAdapter(config);
+    case 'redis':
+      return new RedisAdapter(config);
     case 'vectorize':
       return new VectorizeAdapter(config);
     default:

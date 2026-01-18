@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor RAG Dashboard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-dot { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+  <div id="app" class="flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-900 border-r border-gray-800 min-h-screen p-4 fixed">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg">Cursor RAG</h1>
+          <p class="text-xs text-gray-500">Dashboard</p>
+        </div>
+      </div>
+
+      <nav class="space-y-1">
+        <a href="#" onclick="showTab('overview')" id="nav-overview" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800 text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          Overview
+        </a>
+        <a href="#" onclick="showTab('search')" id="nav-search" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          Search
+        </a>
+        <a href="#" onclick="showTab('activity')" id="nav-activity" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          Activity
+        </a>
+        <a href="#" onclick="showTab('settings')" id="nav-settings" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Settings
+        </a>
+      </nav>
+
+      <div class="absolute bottom-4 left-4 right-4">
+        <div class="bg-gray-800 rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
+            <span class="text-sm text-gray-400">Server Status</span>
+          </div>
+          <p class="text-xs text-gray-500">Connected to MCP</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 flex-1 p-8">
+      <!-- Overview Tab -->
+      <div id="tab-overview" class="tab-content">
+        <h2 class="text-2xl font-bold mb-6">Overview</h2>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Total Chunks</span>
+              <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+              </svg>
+            </div>
+            <p class="text-3xl font-bold" id="stat-chunks">-</p>
+          </div>
+          
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Vector Store</span>
+              <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </div>
+            <p class="text-xl font-bold capitalize" id="stat-vectorstore">-</p>
+          </div>
+          
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Embeddings</span>
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+              </svg>
+            </div>
+            <p class="text-xl font-bold capitalize" id="stat-embeddings">-</p>
+          </div>
+          
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Firecrawl</span>
+              <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+              </svg>
+            </div>
+            <p class="text-xl font-bold" id="stat-firecrawl">-</p>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
+          <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="showTab('search')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Search Knowledge Base
+            </button>
+            <button onclick="refreshStats()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Refresh Stats
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Activity Preview -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Recent Activity</h3>
+            <a href="#" onclick="showTab('activity')" class="text-primary-500 text-sm hover:underline">View all</a>
+          </div>
+          <div id="recent-activity" class="space-y-3">
+            <p class="text-gray-500 text-sm">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Tab -->
+      <div id="tab-search" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Search Knowledge Base</h2>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex gap-4">
+            <input type="text" id="search-input" placeholder="Enter your search query..." 
+              class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            <button onclick="performSearch()" class="px-6 py-3 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Search
+            </button>
+          </div>
+        </div>
+
+        <div id="search-results" class="space-y-4">
+          <p class="text-gray-500 text-center py-8">Enter a query to search the knowledge base</p>
+        </div>
+      </div>
+
+      <!-- Activity Tab -->
+      <div id="tab-activity" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Activity Log</h2>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div id="activity-log" class="divide-y divide-gray-800">
+            <p class="text-gray-500 text-center py-8">Loading activity...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="tab-settings" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">Settings</h2>
+        
+        <div class="space-y-6">
+          <!-- Vector Store Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">Vector Store</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Type</label>
+                <select id="config-vectorstore" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <option value="chroma">ChromaDB (Local)</option>
+                  <option value="qdrant">Qdrant</option>
+                  <option value="vectorize">Cloudflare Vectorize</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Embeddings Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">Embeddings</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Model</label>
+                <select id="config-embeddings" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <option value="xenova">Xenova (Local)</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="ollama">Ollama</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Proxy Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">Proxy Configuration</h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" id="config-proxy-enabled" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                <label for="config-proxy-enabled" class="text-sm">Enable rotating proxy</label>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Driver</label>
+                  <select id="config-proxy-driver" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                    <option value="none">None</option>
+                    <option value="packetstream">PacketStream</option>
+                    <option value="smartproxy">SmartProxy</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Host</label>
+                  <input type="text" id="config-proxy-host" placeholder="proxy.packetstream.io" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Port</label>
+                  <input type="number" id="config-proxy-port" placeholder="31112" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Username</label>
+                  <input type="text" id="config-proxy-username" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-gray-400 mb-2">Password</label>
+                  <input type="password" id="config-proxy-password" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex justify-end">
+            <button onclick="saveSettings()" class="px-6 py-3 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    // Tab Navigation
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-link').forEach(el => {
+        el.classList.remove('bg-gray-800', 'text-white');
+        el.classList.add('text-gray-400');
+      });
+      
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const navLink = document.getElementById(`nav-${tabId}`);
+      navLink.classList.add('bg-gray-800', 'text-white');
+      navLink.classList.remove('text-gray-400');
+    }
+
+    // Fetch Stats
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_BASE}/api/stats`);
+        const stats = await res.json();
+        
+        document.getElementById('stat-chunks').textContent = stats.totalChunks.toLocaleString();
+        document.getElementById('stat-vectorstore').textContent = stats.vectorStore;
+        document.getElementById('stat-embeddings').textContent = stats.embeddings;
+        document.getElementById('stat-firecrawl').textContent = stats.firecrawlConfigured ? 'Configured' : 'Not configured';
+      } catch (e) {
+        console.error('Failed to fetch stats:', e);
+      }
+    }
+
+    function refreshStats() {
+      fetchStats();
+    }
+
+    // Fetch Activity
+    async function fetchActivity() {
+      try {
+        const res = await fetch(`${API_BASE}/api/activity`);
+        const activity = await res.json();
+        
+        const recentEl = document.getElementById('recent-activity');
+        const fullEl = document.getElementById('activity-log');
+        
+        if (activity.length === 0) {
+          recentEl.innerHTML = '<p class="text-gray-500 text-sm">No recent activity</p>';
+          fullEl.innerHTML = '<p class="text-gray-500 text-center py-8">No activity recorded yet</p>';
+          return;
+        }
+        
+        const renderActivity = (items) => items.map(item => `
+          <div class="flex items-start gap-3 p-4">
+            <div class="w-2 h-2 mt-2 rounded-full ${item.type === 'error' ? 'bg-red-500' : item.type === 'search' ? 'bg-blue-500' : 'bg-green-500'}"></div>
+            <div class="flex-1">
+              <p class="text-sm">${item.message}</p>
+              <p class="text-xs text-gray-500 mt-1">${new Date(item.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+        `).join('');
+        
+        recentEl.innerHTML = renderActivity(activity.slice(0, 5));
+        fullEl.innerHTML = renderActivity(activity);
+      } catch (e) {
+        console.error('Failed to fetch activity:', e);
+      }
+    }
+
+    // Fetch Config
+    async function fetchConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/api/config`);
+        const config = await res.json();
+        
+        if (config.error) return;
+        
+        document.getElementById('config-vectorstore').value = config.vectorStore || 'chroma';
+        document.getElementById('config-embeddings').value = config.embeddings || 'xenova';
+        
+        if (config.proxy) {
+          document.getElementById('config-proxy-enabled').checked = config.proxy.enabled;
+          document.getElementById('config-proxy-driver').value = config.proxy.driver || 'none';
+          document.getElementById('config-proxy-host').value = config.proxy.host || '';
+          document.getElementById('config-proxy-port').value = config.proxy.port || '';
+          document.getElementById('config-proxy-username').value = config.proxy.username || '';
+        }
+      } catch (e) {
+        console.error('Failed to fetch config:', e);
+      }
+    }
+
+    // Save Settings
+    async function saveSettings() {
+      const updates = {
+        vectorStore: document.getElementById('config-vectorstore').value,
+        embeddings: document.getElementById('config-embeddings').value,
+        proxy: {
+          enabled: document.getElementById('config-proxy-enabled').checked,
+          driver: document.getElementById('config-proxy-driver').value,
+          host: document.getElementById('config-proxy-host').value || undefined,
+          port: parseInt(document.getElementById('config-proxy-port').value) || undefined,
+          username: document.getElementById('config-proxy-username').value || undefined,
+          password: document.getElementById('config-proxy-password').value || undefined,
+        }
+      };
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+        
+        if (res.ok) {
+          alert('Settings saved successfully!');
+          fetchStats();
+        } else {
+          alert('Failed to save settings');
+        }
+      } catch (e) {
+        alert('Failed to save settings: ' + e.message);
+      }
+    }
+
+    // Search
+    async function performSearch() {
+      const query = document.getElementById('search-input').value.trim();
+      if (!query) return;
+      
+      const resultsEl = document.getElementById('search-results');
+      resultsEl.innerHTML = '<p class="text-gray-500 text-center py-8">Searching...</p>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, topK: 10 })
+        });
+        
+        const results = await res.json();
+        
+        if (results.error) {
+          resultsEl.innerHTML = `<p class="text-red-500 text-center py-8">${results.error}</p>`;
+          return;
+        }
+        
+        if (results.length === 0) {
+          resultsEl.innerHTML = '<p class="text-gray-500 text-center py-8">No results found</p>';
+          return;
+        }
+        
+        resultsEl.innerHTML = results.map((result, i) => `
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-gray-400">Score: ${result.score.toFixed(4)}</span>
+              <span class="text-xs text-gray-500">${result.metadata?.source || 'Unknown source'}</span>
+            </div>
+            <p class="text-sm text-gray-300 whitespace-pre-wrap">${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}</p>
+          </div>
+        `).join('');
+      } catch (e) {
+        resultsEl.innerHTML = `<p class="text-red-500 text-center py-8">Search failed: ${e.message}</p>`;
+      }
+    }
+
+    // Enter key for search
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performSearch();
+    });
+
+    // Initial load
+    fetchStats();
+    fetchActivity();
+    fetchConfig();
+    
+    // Refresh every 30 seconds
+    setInterval(() => {
+      fetchStats();
+      fetchActivity();
+    }, 30000);
+  </script>
+</body>
+</html>

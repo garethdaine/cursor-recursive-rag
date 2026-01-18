@@ -1,6 +1,6 @@
 # cursor-recursive-rag
 
-Recursive RAG MCP server for Cursor IDE with interactive setup wizard. Build a knowledge base from your documentation and codebase, enabling multi-hop retrieval and iterative query refinement.
+Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web dashboard. Build a knowledge base from your documentation and codebase, enabling multi-hop retrieval and iterative query refinement.
 
 ## Features
 
@@ -8,6 +8,8 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard. Build a k
 - **Configurable Vector Stores**: ChromaDB (local), Qdrant (local/cloud), Cloudflare Vectorize
 - **Configurable Embeddings**: Local (Xenova/transformers.js), OpenAI, Ollama
 - **Web Crawling**: Firecrawl integration for documentation ingestion
+- **Rotating Proxy Support**: Optional PacketStream/SmartProxy integration for URL fetching
+- **Web Dashboard**: Real-time monitoring, search, and configuration UI (Tailwind CSS)
 - **Interactive Setup**: Guided configuration wizard
 - **MCP Integration**: Automatic registration with Cursor IDE
 
@@ -31,6 +33,9 @@ cursor-rag status
 
 # Test search from CLI
 cursor-rag search "how to authenticate users"
+
+# Start the web dashboard
+cursor-rag dashboard
 ```
 
 ## Installation
@@ -77,7 +82,7 @@ Run `cursor-rag setup` to configure the system. The wizard will:
 
 ### `cursor-rag setup`
 
-Interactive setup wizard to configure vector store, embeddings, and API keys.
+Interactive setup wizard to configure vector store, embeddings, proxy, and API keys.
 
 ```bash
 cursor-rag setup
@@ -119,6 +124,21 @@ Show current configuration and knowledge base statistics.
 cursor-rag status
 ```
 
+### `cursor-rag dashboard`
+
+Start the web dashboard for monitoring and configuration.
+
+```bash
+cursor-rag dashboard
+cursor-rag dashboard --port 8080
+```
+
+The dashboard provides:
+- **Overview**: Total chunks, vector store stats, recent activity
+- **Search**: Test queries against your knowledge base
+- **Activity Log**: Real-time view of ingestion and search operations
+- **Settings**: Configure vector store, embeddings, and proxy settings
+
 ## Usage in Cursor
 
 After setup, use in Cursor chat with `@recursive-rag`:
@@ -151,9 +171,28 @@ Configuration is stored in `~/.cursor-rag/config.json`:
   "embeddings": "xenova",
   "apiKeys": {
     "firecrawl": "fc-..."
+  },
+  "proxy": {
+    "enabled": true,
+    "driver": "packetstream",
+    "host": "proxy.packetstream.io",
+    "port": 31112,
+    "username": "your-username",
+    "password": "your-password"
+  },
+  "dashboard": {
+    "enabled": true,
+    "port": 3333
   }
 }
 ```
+
+### Proxy Configuration
+
+The optional rotating proxy is used for direct URL fetching (not needed when using Firecrawl, which handles proxying internally). Supported providers:
+
+- **PacketStream**: Residential proxies with country targeting
+- **SmartProxy**: Datacenter and residential options
 
 The MCP server is registered in `~/.cursor/mcp.json`:
 

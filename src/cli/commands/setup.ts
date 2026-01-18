@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { writeConfig, registerWithCursor } from '../../services/config.js';
-import type { RAGConfig } from '../../types/index.js';
+import type { RAGConfig, ProxyConfig } from '../../types/index.js';
 
 export const setupCommand = new Command('setup')
   .description('Interactive setup wizard')
@@ -21,10 +21,13 @@ export const setupCommand = new Command('setup')
     // Step 3: API Keys (conditional)
     const apiKeys = await promptApiKeys(vectorStore, embeddings);
 
-    // Step 4: Validate connections
+    // Step 4: Proxy Configuration (optional)
+    const proxy = await promptProxy();
+
+    // Step 5: Validate connections
     const spinner = ora('Validating configuration...').start();
     try {
-      await validateConfig({ vectorStore, embeddings, apiKeys });
+      await validateConfig({ vectorStore, embeddings, apiKeys, proxy });
       spinner.succeed('Configuration validated');
     } catch (error) {
       spinner.fail(`Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -32,15 +35,20 @@ export const setupCommand = new Command('setup')
       process.exit(1);
     }
 
-    // Step 5: Write config
+    // Step 6: Write config
     const config: RAGConfig = {
       vectorStore: vectorStore as 'chroma' | 'qdrant' | 'vectorize',
       embeddings: embeddings as 'xenova' | 'openai' | 'ollama',
-      apiKeys
+      apiKeys,
+      proxy,
+      dashboard: {
+        enabled: true,
+        port: 3333
+      }
     };
     writeConfig(config);
 
-    // Step 6: Register with Cursor
+    // Step 7: Register with Cursor
     try {
       await registerWithCursor();
       console.log(chalk.green('✅ MCP server registered with Cursor'));
@@ -53,7 +61,8 @@ export const setupCommand = new Command('setup')
     console.log('Next steps:');
     console.log('  1. Restart Cursor IDE');
     console.log('  2. Use @recursive-rag in chat');
-    console.log('  3. Run: cursor-rag ingest <url> to add docs\n');
+    console.log('  3. Run: cursor-rag ingest <url> to add docs');
+    console.log('  4. Run: cursor-rag dashboard to view the web UI\n');
   });
 
 async function promptVectorStore(): Promise<string> {
@@ -173,6 +182,70 @@ async function promptApiKeys(vectorStore: string, embeddings: string): Promise<R
   return apiKeys;
 }
 
+async function promptProxy(): Promise<ProxyConfig> {
+  const { useProxy } = await inquirer.prompt([{
+    type: 'confirm',
+    name: 'useProxy',
+    message: 'Do you want to configure a rotating proxy for URL fetching?',
+    default: false
+  }]);
+
+  if (!useProxy) {
+    return { enabled: false, driver: 'none' };
+  }
+
+  const { driver } = await inquirer.prompt([{
+    type: 'list',
+    name: 'driver',
+    message: 'Select proxy provider:',
+    choices: [
+      { name: 'PacketStream (residential proxies)', value: 'packetstream' },
+      { name: 'SmartProxy', value: 'smartproxy' }
+    ]
+  }]);
+
+  const defaults = driver === 'packetstream' 
+    ? { host: 'proxy.packetstream.io', port: 31112 }
+    : { host: 'gate.smartproxy.com', port: 7000 };
+
+  const { host } = await inquirer.prompt([{
+    type: 'input',
+    name: 'host',
+    message: `Proxy host (default: ${defaults.host}):`,
+    default: defaults.host
+  }]);
+
+  const { port } = await inquirer.prompt([{
+    type: 'input',
+    name: 'port',
+    message: `Proxy port (default: ${defaults.port}):`,
+    default: defaults.port.toString()
+  }]);
+
+  const { username } = await inquirer.prompt([{
+    type: 'input',
+    name: 'username',
+    message: 'Proxy username:',
+    validate: (input: string) => input.trim() ? true : 'Username is required'
+  }]);
+
+  const { password } = await inquirer.prompt([{
+    type: 'password',
+    name: 'password',
+    message: 'Proxy password:',
+    validate: (input: string) => input.trim() ? true : 'Password is required'
+  }]);
+
+  return {
+    enabled: true,
+    driver: driver as 'packetstream' | 'smartproxy',
+    host,
+    port: parseInt(port, 10),
+    username,
+    password
+  };
+}
+
 async function validateConfig(config: RAGConfig): Promise<void> {
   // Basic validation - can be expanded later
   if (!config.vectorStore || !config.embeddings) {
@@ -181,6 +254,13 @@ async function validateConfig(config: RAGConfig): Promise<void> {
 
   if (config.embeddings === 'openai' && !config.apiKeys?.openai) {
     throw new Error('OpenAI API key is required for OpenAI embeddings');
+  }
+
+  // Validate proxy config if enabled
+  if (config.proxy?.enabled) {
+    if (!config.proxy.username || !config.proxy.password) {
+      throw new Error('Proxy username and password are required when proxy is enabled');
+    }
   }
 
   // TODO: Add actual connection tests for vector stores and embeddings

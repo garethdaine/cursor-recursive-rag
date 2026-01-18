@@ -12,6 +12,15 @@ export interface VectorDocument {
   metadata: Record<string, any>;
 }
 
+export interface ProxyConfig {
+  enabled: boolean;
+  driver: 'packetstream' | 'smartproxy' | 'none';
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+}
+
 export interface SearchResult {
   id: string;
   content: string;
@@ -40,6 +49,15 @@ export interface RAGConfig {
     };
   };
   vectorStoreConfig?: Record<string, any>;
+  proxy?: ProxyConfig;
+  dashboard?: {
+    enabled: boolean;
+    port: number;
+    auth?: {
+      username: string;
+      password: string;
+    };
+  };
 }
 
 export interface ChunkOptions {

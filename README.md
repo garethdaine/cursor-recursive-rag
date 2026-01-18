@@ -1,6 +1,12 @@
 # cursor-recursive-rag
 
+[![Version](https://img.shields.io/badge/version-0.2.0--alpha.1-blue.svg)](https://github.com/garethdaine/cursor-recursive-rag/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org)
+
 Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web dashboard. Build a knowledge base from your documentation and codebase, enabling multi-hop retrieval and iterative query refinement.
+
+> **Status:** Alpha - Core features working, API may change
 
 ## Features
 

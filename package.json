@@ -1,6 +1,6 @@
 {
   "name": "cursor-recursive-rag",
-  "version": "0.1.0",
+  "version": "0.2.0-alpha.1",
   "description": "Recursive RAG MCP server for Cursor IDE with interactive setup",
   "type": "module",
   "bin": {
@@ -11,7 +11,11 @@
     "build": "tsc",
     "dev": "tsx watch src/cli/index.ts",
     "start:server": "node dist/server/index.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
+    "release": "npm run build && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git tag v$(node -p \"require('./package.json').version\") && git push && git push --tags"
   },
   "keywords": [
     "cursor",

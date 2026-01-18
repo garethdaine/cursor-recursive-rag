@@ -149,7 +149,18 @@ The dashboard provides:
 
 ## Usage in Cursor
 
-After setup, the MCP tools are available to the AI agent in Cursor Chat. Ask questions naturally and the AI will use the appropriate tools:
+### Option 1: Via `@Docs` (Recommended)
+
+The dashboard serves your knowledge base as browsable documentation that Cursor can index:
+
+1. Start the dashboard: `cursor-rag dashboard`
+2. In Cursor, type `@Docs` and select **Add new doc**
+3. Enter: `http://localhost:3333/docs`
+4. Now use `@Docs cursor-recursive-rag` in your prompts!
+
+### Option 2: Via MCP Tools (Natural Language)
+
+The MCP tools are available to the AI agent in Cursor Chat. Ask questions naturally and the AI will use the appropriate tools:
 
 ```
 Search my knowledge base for authentication patterns

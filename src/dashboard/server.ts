@@ -203,6 +203,41 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       return;
     }
 
+    // Serve knowledge base as browsable docs for Cursor @Docs integration
+    if (path === '/api/docs' && req.method === 'GET') {
+      try {
+        const config = loadConfig();
+        const vectorStore = createVectorStore(config.vectorStore, config);
+        const embedder = await createEmbedder(config.embeddings, config);
+        
+        // Get a sample to extract sources
+        const sampleEmbedding = await embedder.embed('documentation guide');
+        const results = await vectorStore.search(sampleEmbedding, { topK: 1000 });
+        
+        // Group by source
+        const sourceMap = new Map<string, Array<{ content: string; score: number }>>();
+        for (const result of results) {
+          const source = result.metadata?.source || 'unknown';
+          if (!sourceMap.has(source)) {
+            sourceMap.set(source, []);
+          }
+          sourceMap.get(source)!.push({ content: result.content, score: result.score });
+        }
+        
+        // Return as JSON for the docs index
+        const docs = Array.from(sourceMap.entries()).map(([source, chunks]) => ({
+          source,
+          chunkCount: chunks.length,
+          preview: chunks[0]?.content.substring(0, 200) + '...'
+        }));
+        
+        res.end(JSON.stringify({ docs, totalSources: docs.length }));
+      } catch (e) {
+        res.end(JSON.stringify({ docs: [], error: e instanceof Error ? e.message : 'Failed to load docs' }));
+      }
+      return;
+    }
+
     // Proxy requests to MCP Gateway to avoid CORS
     if (path.startsWith('/api/gateway/') && req.method === 'GET') {
       try {
@@ -229,6 +264,141 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
     res.statusCode = 500;
     res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal error' }));
   }
+}
+
+async function serveDocsPage(req: IncomingMessage, res: ServerResponse, path: string, port: number): Promise<void> {
+  res.setHeader('Content-Type', 'text/html');
+  
+  try {
+    const config = loadConfig();
+    const vectorStore = createVectorStore(config.vectorStore, config);
+    const embedder = await createEmbedder(config.embeddings, config);
+    
+    if (path === '/docs' || path === '/docs/') {
+      // Index page - list all sources
+      const sampleEmbedding = await embedder.embed('documentation');
+      const results = await vectorStore.search(sampleEmbedding, { topK: 1000 });
+      
+      const sourceMap = new Map<string, number>();
+      for (const result of results) {
+        const source = result.metadata?.source || 'unknown';
+        sourceMap.set(source, (sourceMap.get(source) || 0) + 1);
+      }
+      
+      const sourceLinks = Array.from(sourceMap.entries())
+        .map(([source, count]) => {
+          const encodedSource = encodeURIComponent(source);
+          return `<li><a href="/docs/source/${encodedSource}">${escapeHtml(source)}</a> (${count} chunks)</li>`;
+        })
+        .join('\n');
+      
+      res.end(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Knowledge Base - cursor-recursive-rag</title>
+  <meta name="description" content="Indexed documentation and knowledge base for RAG retrieval">
+</head>
+<body>
+  <h1>Knowledge Base Index</h1>
+  <p>This knowledge base contains ${results.length} chunks from ${sourceMap.size} sources.</p>
+  <h2>Sources</h2>
+  <ul>
+    ${sourceLinks || '<li>No sources indexed yet. Use <code>cursor-rag ingest</code> to add documents.</li>'}
+  </ul>
+  <hr>
+  <p><a href="/docs/search">Search the knowledge base</a></p>
+</body>
+</html>`);
+      return;
+    }
+    
+    if (path.startsWith('/docs/source/')) {
+      // Show chunks from a specific source
+      const encodedSource = path.replace('/docs/source/', '');
+      const source = decodeURIComponent(encodedSource);
+      
+      const embedding = await embedder.embed(source);
+      const results = await vectorStore.search(embedding, { topK: 500 });
+      const sourceChunks = results.filter(r => r.metadata?.source === source);
+      
+      const chunkHtml = sourceChunks
+        .map((chunk, idx) => `
+          <article>
+            <h3>Chunk ${idx + 1}</h3>
+            <pre>${escapeHtml(chunk.content)}</pre>
+          </article>
+        `)
+        .join('\n');
+      
+      res.end(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${escapeHtml(source)} - Knowledge Base</title>
+  <meta name="description" content="Documentation from ${escapeHtml(source)}">
+</head>
+<body>
+  <h1>${escapeHtml(source)}</h1>
+  <p><a href="/docs">← Back to index</a></p>
+  <p>${sourceChunks.length} chunks from this source</p>
+  ${chunkHtml}
+</body>
+</html>`);
+      return;
+    }
+    
+    if (path === '/docs/search') {
+      const url = new URL(req.url || '/', `http://localhost:${port}`);
+      const query = url.searchParams.get('q') || '';
+      
+      let resultsHtml = '';
+      if (query) {
+        const embedding = await embedder.embed(query);
+        const results = await vectorStore.search(embedding, { topK: 20 });
+        
+        resultsHtml = results
+          .map((r, idx) => `
+            <article>
+              <h3>${idx + 1}. Score: ${r.score.toFixed(4)}</h3>
+              <p><strong>Source:</strong> ${escapeHtml(r.metadata?.source || 'unknown')}</p>
+              <pre>${escapeHtml(r.content)}</pre>
+            </article>
+          `)
+          .join('\n');
+      }
+      
+      res.end(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Search - Knowledge Base</title>
+</head>
+<body>
+  <h1>Search Knowledge Base</h1>
+  <p><a href="/docs">← Back to index</a></p>
+  <form method="get" action="/docs/search">
+    <input type="text" name="q" value="${escapeHtml(query)}" placeholder="Search..." style="width: 300px">
+    <button type="submit">Search</button>
+  </form>
+  ${query ? `<h2>Results for "${escapeHtml(query)}"</h2>${resultsHtml}` : ''}
+</body>
+</html>`);
+      return;
+    }
+    
+    res.statusCode = 404;
+    res.end('<html><body><h1>Not Found</h1><p><a href="/docs">Back to docs</a></p></body></html>');
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(`<html><body><h1>Error</h1><p>${escapeHtml(error instanceof Error ? error.message : 'Unknown error')}</p></body></html>`);
+  }
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function serveStatic(res: ServerResponse, filePath: string): void {
@@ -271,6 +441,9 @@ export function startDashboard(port: number = 3333): void {
 
     if (path.startsWith('/api/')) {
       await handleAPI(req, res, path);
+    } else if (path === '/docs' || path.startsWith('/docs/')) {
+      // Serve knowledge base as HTML for Cursor @Docs crawling
+      await serveDocsPage(req, res, path, port);
     } else {
       serveStatic(res, path);
     }

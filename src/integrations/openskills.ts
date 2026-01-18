@@ -28,7 +28,11 @@ const DEFAULT_SKILL_PATHS = [
   './.agent/skills',
   join(homedir(), '.agent/skills'),
   './.claude/skills',
-  join(homedir(), '.claude/skills')
+  join(homedir(), '.claude/skills'),
+  './.cursor/skills',
+  join(homedir(), '.cursor/skills'),
+  join(homedir(), '.cursor/skills-cursor'),
+  join(homedir(), '.codex/skills')
 ];
 
 export class OpenSkillsClient {

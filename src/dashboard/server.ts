@@ -203,6 +203,23 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       return;
     }
 
+    // Proxy requests to MCP Gateway to avoid CORS
+    if (path.startsWith('/api/gateway/') && req.method === 'GET') {
+      try {
+        const config = loadConfig();
+        const gatewayUrl = config.mcpGateway?.url || 'http://localhost:3010';
+        const gatewayPath = path.replace('/api/gateway', '');
+        
+        const gatewayRes = await fetch(`${gatewayUrl}${gatewayPath}`);
+        const data = await gatewayRes.json();
+        res.end(JSON.stringify(data));
+      } catch (e) {
+        res.statusCode = 502;
+        res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Gateway request failed' }));
+      }
+      return;
+    }
+
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));
   } catch (error) {

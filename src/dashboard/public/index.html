@@ -454,10 +454,10 @@
       }
     }
 
-    // Fetch Gateway Health
+    // Fetch Gateway Health (via proxy to avoid CORS)
     async function fetchGatewayHealth() {
       try {
-        const res = await fetch(`${gatewayUrl}/health`);
+        const res = await fetch(`${API_BASE}/api/gateway/health`);
         const health = await res.json();
         
         document.getElementById('stat-gateway-tools').textContent = health.tools?.enabled || health.tools || 0;
@@ -513,13 +513,13 @@
       }
     }
 
-    // Load Gateway Tools
+    // Load Gateway Tools (via proxy to avoid CORS)
     async function loadGatewayTools() {
       const listEl = document.getElementById('gateway-tools-list');
       listEl.innerHTML = '<p class="text-gray-500 text-center py-8">Loading tools from MCP Gateway...</p>';
       
       try {
-        const res = await fetch(`${gatewayUrl}/api/code/tools/search?detailLevel=name_description`);
+        const res = await fetch(`${API_BASE}/api/gateway/api/code/tools/search?detailLevel=name_description`);
         const data = await res.json();
         
         allGatewayTools = data.tools || data || [];

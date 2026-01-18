@@ -208,9 +208,12 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       try {
         const config = loadConfig();
         const gatewayUrl = config.mcpGateway?.url || 'http://localhost:3010';
-        const gatewayPath = path.replace('/api/gateway', '');
+        // Preserve query string when proxying
+        const fullUrl = new URL(req.url || '', `http://${req.headers.host}`);
+        const gatewayPath = fullUrl.pathname.replace('/api/gateway', '');
+        const queryString = fullUrl.search; // includes the '?' if present
         
-        const gatewayRes = await fetch(`${gatewayUrl}${gatewayPath}`);
+        const gatewayRes = await fetch(`${gatewayUrl}${gatewayPath}${queryString}`);
         const data = await gatewayRes.json();
         res.end(JSON.stringify(data));
       } catch (e) {

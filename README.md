@@ -24,8 +24,10 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web da
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g cursor-recursive-rag
+# Clone and install
+git clone https://github.com/garethdaine/cursor-recursive-rag.git
+cd cursor-recursive-rag
+npm install && npm run build && npm link
 
 # Run interactive setup
 cursor-rag setup
@@ -48,20 +50,21 @@ cursor-rag dashboard
 
 ## Installation
 
-### From npm (when published)
+### From GitHub (recommended)
 
 ```bash
-npm install -g cursor-recursive-rag
-```
-
-### From source
-
-```bash
-git clone git@github.com:garethdaine/cursor-recursive-rag.git
+git clone https://github.com/garethdaine/cursor-recursive-rag.git
 cd cursor-recursive-rag
 npm install
 npm run build
 npm link  # Makes cursor-rag available globally
+```
+
+### From npm (coming soon)
+
+```bash
+# Not yet published
+npm install -g cursor-recursive-rag
 ```
 
 ## Setup Wizard

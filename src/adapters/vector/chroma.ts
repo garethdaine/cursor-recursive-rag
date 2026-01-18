@@ -1,28 +1,47 @@
 import { ChromaClient } from 'chromadb';
 import type { VectorStore, VectorDocument, SearchResult, SearchOptions } from '../../types/index.js';
 import type { RAGConfig } from '../../types/index.js';
-import { CONFIG_DIR } from '../../services/config.js';
-import { join } from 'path';
 
+/**
+ * ChromaDB Adapter
+ * 
+ * NOTE: ChromaDB JS client requires a running ChromaDB server.
+ * Start one with: docker run -p 8000:8000 chromadb/chroma
+ * 
+ * For serverless local storage, use Qdrant instead.
+ */
 export class ChromaAdapter implements VectorStore {
   private client: ChromaClient;
   private collection: any;
   private collectionName = 'cursor-rag-knowledge-base';
+  private serverUrl: string;
 
   constructor(config: RAGConfig) {
-    // ChromaDB stores data locally
-    const dataPath = join(CONFIG_DIR, 'chroma-data');
+    // ChromaDB requires a running server - default to localhost:8000
+    this.serverUrl = config.vectorStoreConfig?.chromaUrl || 'http://localhost:8000';
     this.client = new ChromaClient({
-      path: dataPath
+      path: this.serverUrl
     });
   }
 
   async initialize(): Promise<void> {
     if (!this.collection) {
-      this.collection = await this.client.getOrCreateCollection({
-        name: this.collectionName,
-        metadata: { 'hnsw:space': 'cosine' }
-      });
+      try {
+        this.collection = await this.client.getOrCreateCollection({
+          name: this.collectionName,
+          metadata: { 'hnsw:space': 'cosine' }
+        });
+      } catch (error) {
+        const err = error as Error;
+        if (err.message?.includes('Failed to parse URL') || err.message?.includes('ECONNREFUSED')) {
+          throw new Error(
+            `ChromaDB server not running at ${this.serverUrl}. ` +
+            `Start it with: docker run -p 8000:8000 chromadb/chroma\n` +
+            `Or switch to Qdrant for serverless local storage: cursor-rag setup`
+          );
+        }
+        throw error;
+      }
     }
   }
 

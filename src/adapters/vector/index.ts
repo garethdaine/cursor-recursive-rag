@@ -2,12 +2,15 @@ import type { VectorStore, VectorDocument, SearchResult, SearchOptions } from '.
 import { ChromaAdapter } from './chroma.js';
 import { QdrantAdapter } from './qdrant.js';
 import { VectorizeAdapter } from './vectorize.js';
+import { MemoryAdapter } from './memory.js';
 import type { RAGConfig } from '../../types/index.js';
 
 export { VectorStore, VectorDocument, SearchResult, SearchOptions };
 
 export function createVectorStore(type: string, config: RAGConfig): VectorStore {
   switch (type) {
+    case 'memory':
+      return new MemoryAdapter(config);
     case 'chroma':
       return new ChromaAdapter(config);
     case 'qdrant':

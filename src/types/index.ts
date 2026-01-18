@@ -46,7 +46,7 @@ export interface OpenSkillsConfig {
 }
 
 export interface RAGConfig {
-  vectorStore: 'chroma' | 'qdrant' | 'vectorize';
+  vectorStore: 'memory' | 'chroma' | 'qdrant' | 'vectorize';
   embeddings: 'xenova' | 'openai' | 'ollama';
   apiKeys?: {
     openai?: string;

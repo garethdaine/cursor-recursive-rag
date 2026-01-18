@@ -76,7 +76,8 @@ async function promptVectorStore(): Promise<string> {
     name: 'vectorStore',
     message: 'Select vector store:',
     choices: [
-      { name: 'ChromaDB (local, zero setup)', value: 'chroma' },
+      { name: 'Memory (file-based, zero setup, recommended for testing)', value: 'memory' },
+      { name: 'ChromaDB (requires Docker: docker run -p 8000:8000 chromadb/chroma)', value: 'chroma' },
       { name: 'Qdrant (local Docker or cloud)', value: 'qdrant' },
       { name: 'Cloudflare Vectorize (serverless)', value: 'vectorize' }
     ]

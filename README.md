@@ -149,15 +149,17 @@ The dashboard provides:
 
 ## Usage in Cursor
 
-After setup, use in Cursor chat with `@recursive-rag`:
+After setup, the MCP tools are available to the AI agent in Cursor Chat. Ask questions naturally and the AI will use the appropriate tools:
 
 ```
-@recursive-rag How does authentication work in this project and what's the recommended pattern from the NextAuth docs?
+Search my knowledge base for authentication patterns
 
-@recursive-rag search_knowledge "server components data fetching patterns"
+What sources are indexed in my RAG knowledge base?
 
-@recursive-rag crawl_and_ingest url="https://docs.example.com" maxPages=50
+Crawl and ingest https://docs.example.com into my knowledge base with a max of 50 pages
 ```
+
+> **Note:** MCP tools don't use `@` syntax - that's reserved for Cursor's built-in features (`@Codebase`, `@Docs`, `@Files`). MCP tools are called automatically by the AI when relevant to your request.
 
 ### Available MCP Tools
 

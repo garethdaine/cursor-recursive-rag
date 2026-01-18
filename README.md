@@ -68,10 +68,10 @@ npm link  # Makes cursor-rag available globally
 
 Run `cursor-rag setup` to configure the system. The wizard will:
 
-1. **Select Vector Store**:
-   - **Memory**: In-process, zero setup, non-persistent (good for testing)
-   - **Redis Stack** (recommended): Persistent, fast HNSW search, `docker run -p 6379:6379 redis/redis-stack-server`
-   - **Qdrant**: Persistent, local Docker or cloud
+1. **Select Vector Store** (Redis recommended):
+   - **Redis Stack** (default): Persistent, fast HNSW search, `docker run -p 6379:6379 redis/redis-stack-server`
+   - **Qdrant**: Persistent, local Docker or cloud, `docker run -p 6333:6333 qdrant/qdrant`
+   - **Memory**: In-process, non-persistent (testing only)
    - **ChromaDB**: Requires separate server, `docker run -p 8000:8000 chromadb/chroma`
    - **Cloudflare Vectorize**: Serverless (not yet implemented)
 

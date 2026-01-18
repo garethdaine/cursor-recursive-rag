@@ -66,6 +66,18 @@
           </svg>
           Search
         </a>
+        <a href="#" onclick="showTab('gateway')" id="nav-gateway" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          MCP Gateway
+        </a>
+        <a href="#" onclick="showTab('skills')" id="nav-skills" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          OpenSkills
+        </a>
         <a href="#" onclick="showTab('activity')" id="nav-activity" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -84,10 +96,10 @@
       <div class="absolute bottom-4 left-4 right-4">
         <div class="bg-gray-800 rounded-lg p-3">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
+            <div id="status-dot" class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
             <span class="text-sm text-gray-400">Server Status</span>
           </div>
-          <p class="text-xs text-gray-500">Connected to MCP</p>
+          <p id="status-text" class="text-xs text-gray-500">Connected to MCP</p>
         </div>
       </div>
     </aside>
@@ -102,7 +114,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Total Chunks</span>
+              <span class="text-gray-400 text-sm">RAG Chunks</span>
               <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
               </svg>
@@ -112,32 +124,55 @@
           
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Vector Store</span>
+              <span class="text-gray-400 text-sm">Gateway Tools</span>
               <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
             </div>
-            <p class="text-xl font-bold capitalize" id="stat-vectorstore">-</p>
+            <p class="text-3xl font-bold" id="stat-gateway-tools">-</p>
           </div>
           
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Embeddings</span>
+              <span class="text-gray-400 text-sm">OpenSkills</span>
+              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+            <p class="text-3xl font-bold" id="stat-skills">-</p>
+          </div>
+          
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-gray-400 text-sm">Gateway Backends</span>
               <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
               </svg>
             </div>
-            <p class="text-xl font-bold capitalize" id="stat-embeddings">-</p>
+            <p class="text-3xl font-bold" id="stat-backends">-</p>
+          </div>
+        </div>
+
+        <!-- Integration Status -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span id="gateway-status-icon" class="w-3 h-3 bg-gray-500 rounded-full"></span>
+              MCP Gateway
+            </h3>
+            <div id="gateway-status-content" class="text-sm text-gray-400">
+              Checking connection...
+            </div>
           </div>
           
-          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-gray-400 text-sm">Firecrawl</span>
-              <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
-              </svg>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span id="skills-status-icon" class="w-3 h-3 bg-gray-500 rounded-full"></span>
+              OpenSkills
+            </h3>
+            <div id="skills-status-content" class="text-sm text-gray-400">
+              Checking configuration...
             </div>
-            <p class="text-xl font-bold" id="stat-firecrawl">-</p>
           </div>
         </div>
 
@@ -151,11 +186,23 @@
               </svg>
               Search Knowledge Base
             </button>
-            <button onclick="refreshStats()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2">
+            <button onclick="showTab('gateway')" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              Browse Gateway Tools
+            </button>
+            <button onclick="showTab('skills')" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+              Browse Skills
+            </button>
+            <button onclick="refreshAll()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              Refresh Stats
+              Refresh All
             </button>
           </div>
         </div>
@@ -178,7 +225,7 @@
         
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
           <div class="flex gap-4">
-            <input type="text" id="search-input" placeholder="Enter your search query..." 
+            <input type="text" id="search-input" placeholder="Search ingested documents..." 
               class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
             <button onclick="performSearch()" class="px-6 py-3 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,10 +234,64 @@
               Search
             </button>
           </div>
+          <p class="text-xs text-gray-500 mt-2">Searches documents ingested via cursor-rag ingest command</p>
         </div>
 
         <div id="search-results" class="space-y-4">
           <p class="text-gray-500 text-center py-8">Enter a query to search the knowledge base</p>
+        </div>
+      </div>
+
+      <!-- MCP Gateway Tab -->
+      <div id="tab-gateway" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">MCP Gateway Tools</h2>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex gap-4">
+            <input type="text" id="gateway-search-input" placeholder="Search tools (e.g., linear, github, filesystem)..." 
+              class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            <button onclick="searchGatewayTools()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Search
+            </button>
+          </div>
+        </div>
+
+        <!-- Backend Filter -->
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-2" id="backend-filters">
+            <button onclick="filterBackend('')" class="backend-filter px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors active" data-backend="">
+              All
+            </button>
+          </div>
+        </div>
+
+        <div id="gateway-tools-list" class="space-y-4">
+          <p class="text-gray-500 text-center py-8">Loading gateway tools...</p>
+        </div>
+      </div>
+
+      <!-- OpenSkills Tab -->
+      <div id="tab-skills" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-6">OpenSkills</h2>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex gap-4">
+            <input type="text" id="skills-search-input" placeholder="Search skills..." 
+              class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            <button onclick="searchSkills()" class="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Search
+            </button>
+          </div>
+        </div>
+
+        <div id="skills-list" class="space-y-4">
+          <p class="text-gray-500 text-center py-8">Loading skills...</p>
         </div>
       </div>
 
@@ -217,7 +318,8 @@
               <div>
                 <label class="block text-sm text-gray-400 mb-2">Type</label>
                 <select id="config-vectorstore" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                  <option value="chroma">ChromaDB (Local)</option>
+                  <option value="memory">Memory (File-based)</option>
+                  <option value="chroma">ChromaDB (Server)</option>
                   <option value="qdrant">Qdrant</option>
                   <option value="vectorize">Cloudflare Vectorize</option>
                 </select>
@@ -236,6 +338,36 @@
                   <option value="openai">OpenAI</option>
                   <option value="ollama">Ollama</option>
                 </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- MCP Gateway Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">MCP Gateway</h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" id="config-gateway-enabled" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                <label for="config-gateway-enabled" class="text-sm">Enable MCP Gateway integration</label>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Gateway URL</label>
+                <input type="text" id="config-gateway-url" placeholder="http://localhost:3010" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+              </div>
+            </div>
+          </div>
+
+          <!-- OpenSkills Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">OpenSkills</h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" id="config-skills-enabled" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                <label for="config-skills-enabled" class="text-sm">Enable OpenSkills integration</label>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="checkbox" id="config-skills-autoingest" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                <label for="config-skills-autoingest" class="text-sm">Auto-ingest skills into RAG</label>
               </div>
             </div>
           </div>
@@ -261,18 +393,6 @@
                   <label class="block text-sm text-gray-400 mb-2">Host</label>
                   <input type="text" id="config-proxy-host" placeholder="proxy.packetstream.io" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
                 </div>
-                <div>
-                  <label class="block text-sm text-gray-400 mb-2">Port</label>
-                  <input type="number" id="config-proxy-port" placeholder="31112" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-400 mb-2">Username</label>
-                  <input type="text" id="config-proxy-username" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm text-gray-400 mb-2">Password</label>
-                  <input type="password" id="config-proxy-password" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                </div>
               </div>
             </div>
           </div>
@@ -293,6 +413,9 @@
 
   <script>
     const API_BASE = '';
+    let gatewayUrl = 'http://localhost:3010';
+    let allGatewayTools = [];
+    let currentBackendFilter = '';
 
     // Tab Navigation
     function showTab(tabId) {
@@ -304,8 +427,14 @@
       
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
       const navLink = document.getElementById(`nav-${tabId}`);
-      navLink.classList.add('bg-gray-800', 'text-white');
-      navLink.classList.remove('text-gray-400');
+      if (navLink) {
+        navLink.classList.add('bg-gray-800', 'text-white');
+        navLink.classList.remove('text-gray-400');
+      }
+
+      // Load data for specific tabs
+      if (tabId === 'gateway') loadGatewayTools();
+      if (tabId === 'skills') loadSkills();
     }
 
     // Fetch Stats
@@ -315,16 +444,206 @@
         const stats = await res.json();
         
         document.getElementById('stat-chunks').textContent = stats.totalChunks.toLocaleString();
-        document.getElementById('stat-vectorstore').textContent = stats.vectorStore;
-        document.getElementById('stat-embeddings').textContent = stats.embeddings;
-        document.getElementById('stat-firecrawl').textContent = stats.firecrawlConfigured ? 'Configured' : 'Not configured';
+        
+        // Update gateway URL from config
+        if (stats.mcpGatewayUrl) {
+          gatewayUrl = stats.mcpGatewayUrl;
+        }
       } catch (e) {
         console.error('Failed to fetch stats:', e);
       }
     }
 
-    function refreshStats() {
+    // Fetch Gateway Health
+    async function fetchGatewayHealth() {
+      try {
+        const res = await fetch(`${gatewayUrl}/health`);
+        const health = await res.json();
+        
+        document.getElementById('stat-gateway-tools').textContent = health.tools?.enabled || health.tools || 0;
+        document.getElementById('stat-backends').textContent = `${health.backends?.connected || 0}/${health.backends?.total || 0}`;
+        
+        const icon = document.getElementById('gateway-status-icon');
+        const content = document.getElementById('gateway-status-content');
+        
+        if (health.status === 'ok') {
+          icon.className = 'w-3 h-3 bg-green-500 rounded-full';
+          content.innerHTML = `
+            <p>Connected to <strong>${gatewayUrl}</strong></p>
+            <p class="mt-1">${health.tools?.enabled || health.tools} tools available across ${health.backends?.connected} backends</p>
+          `;
+        } else {
+          icon.className = 'w-3 h-3 bg-yellow-500 rounded-full';
+          content.textContent = 'Gateway partially available';
+        }
+      } catch (e) {
+        document.getElementById('stat-gateway-tools').textContent = '-';
+        document.getElementById('stat-backends').textContent = '-';
+        
+        const icon = document.getElementById('gateway-status-icon');
+        const content = document.getElementById('gateway-status-content');
+        icon.className = 'w-3 h-3 bg-red-500 rounded-full';
+        content.innerHTML = `<p class="text-red-400">Not connected</p><p class="text-xs mt-1">Start gateway: cd mcp-gateway && npm start</p>`;
+      }
+    }
+
+    // Fetch Skills
+    async function fetchSkillsCount() {
+      try {
+        const res = await fetch(`${API_BASE}/api/skills`);
+        const data = await res.json();
+        document.getElementById('stat-skills').textContent = data.skills?.length || 0;
+        
+        const icon = document.getElementById('skills-status-icon');
+        const content = document.getElementById('skills-status-content');
+        
+        if (data.skills && data.skills.length > 0) {
+          icon.className = 'w-3 h-3 bg-green-500 rounded-full';
+          content.innerHTML = `<p>${data.skills.length} skills available</p>`;
+        } else {
+          icon.className = 'w-3 h-3 bg-yellow-500 rounded-full';
+          content.innerHTML = `<p>No skills found</p><p class="text-xs mt-1">Install with: npx openskills install anthropics/skills</p>`;
+        }
+      } catch (e) {
+        document.getElementById('stat-skills').textContent = '-';
+        const icon = document.getElementById('skills-status-icon');
+        const content = document.getElementById('skills-status-content');
+        icon.className = 'w-3 h-3 bg-gray-500 rounded-full';
+        content.textContent = 'OpenSkills integration disabled';
+      }
+    }
+
+    // Load Gateway Tools
+    async function loadGatewayTools() {
+      const listEl = document.getElementById('gateway-tools-list');
+      listEl.innerHTML = '<p class="text-gray-500 text-center py-8">Loading tools from MCP Gateway...</p>';
+      
+      try {
+        const res = await fetch(`${gatewayUrl}/api/code/tools/search?detailLevel=name_description`);
+        const data = await res.json();
+        
+        allGatewayTools = data.tools || data || [];
+        
+        // Build backend filters
+        const backends = [...new Set(allGatewayTools.map(t => t.backend || 'unknown'))];
+        const filtersEl = document.getElementById('backend-filters');
+        filtersEl.innerHTML = `
+          <button onclick="filterBackend('')" class="backend-filter px-3 py-1 bg-primary-600 rounded-full text-sm transition-colors" data-backend="">
+            All (${allGatewayTools.length})
+          </button>
+          ${backends.map(b => `
+            <button onclick="filterBackend('${b}')" class="backend-filter px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors" data-backend="${b}">
+              ${b} (${allGatewayTools.filter(t => t.backend === b).length})
+            </button>
+          `).join('')}
+        `;
+        
+        renderGatewayTools(allGatewayTools);
+      } catch (e) {
+        listEl.innerHTML = `<p class="text-red-500 text-center py-8">Failed to load gateway tools. Is MCP Gateway running at ${gatewayUrl}?</p>`;
+      }
+    }
+
+    function filterBackend(backend) {
+      currentBackendFilter = backend;
+      
+      // Update button styles
+      document.querySelectorAll('.backend-filter').forEach(btn => {
+        if (btn.dataset.backend === backend) {
+          btn.classList.remove('bg-gray-800');
+          btn.classList.add('bg-primary-600');
+        } else {
+          btn.classList.remove('bg-primary-600');
+          btn.classList.add('bg-gray-800');
+        }
+      });
+      
+      const filtered = backend ? allGatewayTools.filter(t => t.backend === backend) : allGatewayTools;
+      renderGatewayTools(filtered);
+    }
+
+    function renderGatewayTools(tools) {
+      const listEl = document.getElementById('gateway-tools-list');
+      
+      if (tools.length === 0) {
+        listEl.innerHTML = '<p class="text-gray-500 text-center py-8">No tools found</p>';
+        return;
+      }
+      
+      listEl.innerHTML = tools.map(tool => `
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h4 class="font-mono text-primary-400">${tool.name}</h4>
+            <span class="text-xs px-2 py-1 bg-gray-800 rounded-full">${tool.backend || 'unknown'}</span>
+          </div>
+          <p class="text-sm text-gray-400">${tool.description || 'No description'}</p>
+        </div>
+      `).join('');
+    }
+
+    function searchGatewayTools() {
+      const query = document.getElementById('gateway-search-input').value.toLowerCase().trim();
+      if (!query) {
+        filterBackend(currentBackendFilter);
+        return;
+      }
+      
+      const filtered = allGatewayTools.filter(t => 
+        t.name.toLowerCase().includes(query) || 
+        (t.description && t.description.toLowerCase().includes(query)) ||
+        (t.backend && t.backend.toLowerCase().includes(query))
+      );
+      
+      renderGatewayTools(filtered);
+    }
+
+    // Load Skills
+    async function loadSkills() {
+      const listEl = document.getElementById('skills-list');
+      listEl.innerHTML = '<p class="text-gray-500 text-center py-8">Loading OpenSkills...</p>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/skills`);
+        const data = await res.json();
+        
+        const skills = data.skills || [];
+        
+        if (skills.length === 0) {
+          listEl.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-gray-500 mb-4">No skills installed</p>
+              <p class="text-sm text-gray-600">Install skills with:</p>
+              <code class="text-primary-400 text-sm">npx openskills install anthropics/skills</code>
+            </div>
+          `;
+          return;
+        }
+        
+        listEl.innerHTML = skills.map(skill => `
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-start justify-between mb-2">
+              <h4 class="font-semibold text-yellow-400">${skill.name}</h4>
+              <span class="text-xs px-2 py-1 bg-gray-800 rounded-full">${skill.location || 'local'}</span>
+            </div>
+            <p class="text-sm text-gray-400">${skill.description || 'No description'}</p>
+          </div>
+        `).join('');
+      } catch (e) {
+        listEl.innerHTML = `<p class="text-red-500 text-center py-8">Failed to load skills: ${e.message}</p>`;
+      }
+    }
+
+    function searchSkills() {
+      const query = document.getElementById('skills-search-input').value.toLowerCase().trim();
+      // For now, just reload and filter client-side
+      loadSkills();
+    }
+
+    function refreshAll() {
       fetchStats();
+      fetchGatewayHealth();
+      fetchSkillsCount();
+      fetchActivity();
     }
 
     // Fetch Activity
@@ -367,15 +686,24 @@
         
         if (config.error) return;
         
-        document.getElementById('config-vectorstore').value = config.vectorStore || 'chroma';
+        document.getElementById('config-vectorstore').value = config.vectorStore || 'memory';
         document.getElementById('config-embeddings').value = config.embeddings || 'xenova';
+        
+        if (config.mcpGateway) {
+          document.getElementById('config-gateway-enabled').checked = config.mcpGateway.enabled;
+          document.getElementById('config-gateway-url').value = config.mcpGateway.url || 'http://localhost:3010';
+          if (config.mcpGateway.url) gatewayUrl = config.mcpGateway.url;
+        }
+        
+        if (config.openSkills) {
+          document.getElementById('config-skills-enabled').checked = config.openSkills.enabled;
+          document.getElementById('config-skills-autoingest').checked = config.openSkills.autoIngestSkills;
+        }
         
         if (config.proxy) {
           document.getElementById('config-proxy-enabled').checked = config.proxy.enabled;
           document.getElementById('config-proxy-driver').value = config.proxy.driver || 'none';
           document.getElementById('config-proxy-host').value = config.proxy.host || '';
-          document.getElementById('config-proxy-port').value = config.proxy.port || '';
-          document.getElementById('config-proxy-username').value = config.proxy.username || '';
         }
       } catch (e) {
         console.error('Failed to fetch config:', e);
@@ -387,13 +715,18 @@
       const updates = {
         vectorStore: document.getElementById('config-vectorstore').value,
         embeddings: document.getElementById('config-embeddings').value,
+        mcpGateway: {
+          enabled: document.getElementById('config-gateway-enabled').checked,
+          url: document.getElementById('config-gateway-url').value || 'http://localhost:3010'
+        },
+        openSkills: {
+          enabled: document.getElementById('config-skills-enabled').checked,
+          autoIngestSkills: document.getElementById('config-skills-autoingest').checked
+        },
         proxy: {
           enabled: document.getElementById('config-proxy-enabled').checked,
           driver: document.getElementById('config-proxy-driver').value,
-          host: document.getElementById('config-proxy-host').value || undefined,
-          port: parseInt(document.getElementById('config-proxy-port').value) || undefined,
-          username: document.getElementById('config-proxy-username').value || undefined,
-          password: document.getElementById('config-proxy-password').value || undefined,
+          host: document.getElementById('config-proxy-host').value || undefined
         }
       };
       
@@ -406,7 +739,7 @@
         
         if (res.ok) {
           alert('Settings saved successfully!');
-          fetchStats();
+          refreshAll();
         } else {
           alert('Failed to save settings');
         }
@@ -415,7 +748,7 @@
       }
     }
 
-    // Search
+    // Search Knowledge Base
     async function performSearch() {
       const query = document.getElementById('search-input').value.trim();
       if (!query) return;
@@ -438,7 +771,7 @@
         }
         
         if (results.length === 0) {
-          resultsEl.innerHTML = '<p class="text-gray-500 text-center py-8">No results found</p>';
+          resultsEl.innerHTML = '<p class="text-gray-500 text-center py-8">No results found in knowledge base</p>';
           return;
         }
         
@@ -456,19 +789,29 @@
       }
     }
 
-    // Enter key for search
+    // Enter key handlers
     document.getElementById('search-input').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') performSearch();
     });
+    document.getElementById('gateway-search-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchGatewayTools();
+    });
+    document.getElementById('skills-search-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchSkills();
+    });
 
     // Initial load
-    fetchStats();
-    fetchActivity();
-    fetchConfig();
+    fetchConfig().then(() => {
+      fetchStats();
+      fetchGatewayHealth();
+      fetchSkillsCount();
+      fetchActivity();
+    });
     
     // Refresh every 30 seconds
     setInterval(() => {
       fetchStats();
+      fetchGatewayHealth();
       fetchActivity();
     }, 30000);
   </script>

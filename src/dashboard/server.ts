@@ -7,6 +7,7 @@ import type { RAGConfig } from '../types/index.js';
 import { loadConfig, writeConfig, CONFIG_FILE } from '../services/config.js';
 import { createVectorStore } from '../adapters/vector/index.js';
 import { createEmbedder } from '../adapters/embeddings/index.js';
+import { createOpenSkillsClient } from '../integrations/openskills.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -174,6 +175,31 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
           res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Search failed' }));
         }
       });
+      return;
+    }
+
+    if (path === '/api/skills' && req.method === 'GET') {
+      try {
+        const config = loadConfig();
+        const skillsClient = createOpenSkillsClient(config);
+        
+        if (!skillsClient.isEnabled()) {
+          res.end(JSON.stringify({ skills: [], enabled: false }));
+          return;
+        }
+        
+        const skills = skillsClient.discoverSkills();
+        res.end(JSON.stringify({ 
+          skills: skills.map(s => ({
+            name: s.name,
+            description: s.description,
+            location: s.location
+          })),
+          enabled: true
+        }));
+      } catch (e) {
+        res.end(JSON.stringify({ skills: [], error: e instanceof Error ? e.message : 'Failed to load skills' }));
+      }
       return;
     }
 

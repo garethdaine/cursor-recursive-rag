@@ -1,0 +1,26 @@
+# Source files (dist is published instead)
+src/
+
+# Development files
+*.log
+.DS_Store
+.cursor-rag/
+tsconfig.json
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep README)
+CONTRIBUTING.md
+CHANGELOG.md
+
+# IDE
+.vscode/
+.idea/
+
+# Tests
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/

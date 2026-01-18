@@ -4,7 +4,7 @@
   "description": "Recursive RAG MCP server for Cursor IDE with interactive setup",
   "type": "module",
   "bin": {
-    "cursor-rag": "./bin/cursor-rag.js"
+    "cursor-rag": "bin/cursor-rag.js"
   },
   "main": "./dist/server/index.js",
   "scripts": {

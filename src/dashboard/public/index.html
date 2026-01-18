@@ -519,7 +519,7 @@
       listEl.innerHTML = '<p class="text-gray-500 text-center py-8">Loading tools from MCP Gateway...</p>';
       
       try {
-        const res = await fetch(`${API_BASE}/api/gateway/api/code/tools/search?detailLevel=name_description`);
+        const res = await fetch(`${API_BASE}/api/gateway/api/code/tools/search?detailLevel=name_description&limit=500`);
         const data = await res.json();
         
         allGatewayTools = data.tools || data || [];

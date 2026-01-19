@@ -14,7 +14,7 @@ export interface VectorDocument {
 
 export interface ProxyConfig {
   enabled: boolean;
-  driver: 'packetstream' | 'smartproxy' | 'none';
+  driver: 'packetstream' | 'decodo' | 'smartproxy' | 'none'; // 'smartproxy' is legacy alias for 'decodo'
   host?: string;
   port?: number;
   username?: string;

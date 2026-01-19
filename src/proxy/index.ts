@@ -2,7 +2,7 @@ import type { RAGConfig } from '../types/index.js';
 
 export interface ProxyConfig {
   enabled: boolean;
-  driver: 'packetstream' | 'smartproxy' | 'none';
+  driver: 'packetstream' | 'decodo' | 'smartproxy' | 'none'; // 'smartproxy' is legacy alias for 'decodo'
   host?: string;
   port?: number;
   username?: string;
@@ -91,9 +91,10 @@ export class ProxyManager {
       }
     }
 
-    // SmartProxy-specific formatting
-    if (driver === 'smartproxy') {
-      // SmartProxy uses different format: user-country-us:password
+    // Decodo (formerly SmartProxy) formatting
+    if (driver === 'decodo' || driver === 'smartproxy') {
+      // Decodo uses format: user-country-us:password
+      // See: https://help.decodo.com/reference/public-api-key-authentication
       if (country) {
         finalUsername = `${username}-country-${country.toLowerCase()}`;
       }
@@ -112,8 +113,9 @@ export class ProxyManager {
     switch (this.config.driver) {
       case 'packetstream':
         return 'proxy.packetstream.io';
-      case 'smartproxy':
-        return 'gate.smartproxy.com';
+      case 'decodo':
+      case 'smartproxy': // legacy alias
+        return 'gate.decodo.com';
       default:
         return 'localhost';
     }
@@ -123,7 +125,8 @@ export class ProxyManager {
     switch (this.config.driver) {
       case 'packetstream':
         return 31112;
-      case 'smartproxy':
+      case 'decodo':
+      case 'smartproxy': // legacy alias
         return 7000;
       default:
         return 8080;

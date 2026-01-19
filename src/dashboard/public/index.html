@@ -424,26 +424,43 @@
 
           <!-- Proxy Settings -->
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <h3 class="text-lg font-semibold mb-4">Proxy Configuration</h3>
+            <h3 class="text-lg font-semibold mb-4">Rotating Proxy Configuration</h3>
             <div class="space-y-4">
               <div class="flex items-center gap-3">
                 <input type="checkbox" id="config-proxy-enabled" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
-                <label for="config-proxy-enabled" class="text-sm">Enable rotating proxy</label>
+                <label for="config-proxy-enabled" class="text-sm">Enable rotating proxy for web crawling</label>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm text-gray-400 mb-2">Driver</label>
+                  <label class="block text-sm text-gray-400 mb-2">Provider</label>
                   <select id="config-proxy-driver" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
                     <option value="none">None</option>
                     <option value="packetstream">PacketStream</option>
-                    <option value="smartproxy">SmartProxy</option>
+                    <option value="decodo">Decodo (formerly SmartProxy)</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-400 mb-2">Host</label>
-                  <input type="text" id="config-proxy-host" placeholder="proxy.packetstream.io" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <label class="block text-sm text-gray-400 mb-2">Host <span class="text-gray-600">(optional - uses provider default)</span></label>
+                  <input type="text" id="config-proxy-host" placeholder="e.g., proxy.packetstream.io" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Port <span class="text-gray-600">(optional - uses provider default)</span></label>
+                  <input type="number" id="config-proxy-port" placeholder="e.g., 31112" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Username <span class="text-red-400">*</span></label>
+                  <input type="text" id="config-proxy-username" placeholder="Your proxy username" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Password <span class="text-red-400">*</span></label>
+                  <input type="password" id="config-proxy-password" placeholder="Your proxy password" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
                 </div>
               </div>
+              <p class="text-xs text-gray-500 mt-2">
+                Rotating proxies help avoid IP blocks when crawling websites. 
+                Get credentials from <a href="https://packetstream.io" target="_blank" class="text-primary-400 hover:underline">PacketStream</a> or 
+                <a href="https://decodo.com" target="_blank" class="text-primary-400 hover:underline">Decodo</a>.
+              </p>
             </div>
           </div>
 
@@ -827,8 +844,14 @@
         
         if (config.proxy) {
           document.getElementById('config-proxy-enabled').checked = config.proxy.enabled;
-          document.getElementById('config-proxy-driver').value = config.proxy.driver || 'none';
+          // Handle legacy 'smartproxy' -> 'decodo' rename
+          let driver = config.proxy.driver || 'none';
+          if (driver === 'smartproxy') driver = 'decodo';
+          document.getElementById('config-proxy-driver').value = driver;
           document.getElementById('config-proxy-host').value = config.proxy.host || '';
+          document.getElementById('config-proxy-port').value = config.proxy.port || '';
+          document.getElementById('config-proxy-username').value = config.proxy.username || '';
+          document.getElementById('config-proxy-password').value = config.proxy.password || '';
         }
       } catch (e) {
         console.error('Failed to fetch config:', e);
@@ -859,7 +882,10 @@
         proxy: {
           enabled: document.getElementById('config-proxy-enabled').checked,
           driver: document.getElementById('config-proxy-driver').value,
-          host: document.getElementById('config-proxy-host').value || undefined
+          host: document.getElementById('config-proxy-host').value || undefined,
+          port: document.getElementById('config-proxy-port').value ? parseInt(document.getElementById('config-proxy-port').value) : undefined,
+          username: document.getElementById('config-proxy-username').value || undefined,
+          password: document.getElementById('config-proxy-password').value || undefined
         }
       };
       

@@ -1,7 +1,7 @@
 {
   "name": "cursor-recursive-rag",
-  "version": "0.2.0-alpha.3",
-  "description": "Recursive RAG MCP server for Cursor IDE with interactive setup",
+  "version": "0.2.0",
+  "description": "Recursive RAG MCP server for Cursor IDE with dashboard and rules optimizer",
   "type": "module",
   "bin": {
     "cursor-rag": "bin/cursor-rag.js"

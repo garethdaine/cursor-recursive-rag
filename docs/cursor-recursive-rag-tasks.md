@@ -200,37 +200,42 @@ Store extracted knowledge as first-class searchable chunks with relationships.
 
 ## Epic: Phase 4 - Relationship Graph
 
-### CRR-401: Define Relationship Types
+### CRR-401: Define Relationship Types ✅
 **Estimate**: 1 point
 **Labels**: graph, types
+**Status**: COMPLETED
 
 Define all relationship types and graph interfaces.
 
 **File**: `src/types/relationships.ts`
 
 **Acceptance Criteria**:
-- [ ] All 13 relationship types defined
-- [ ] RelationshipType enum exported
-- [ ] Relationship interface with strength and metadata
-- [ ] GraphTraversalOptions and GraphNode interfaces
+- [x] All 19 relationship types defined (extended from spec's 13)
+- [x] RelationshipType enum exported (unified with memory.ts)
+- [x] Relationship interface with strength and metadata
+- [x] GraphTraversalOptions and GraphNode interfaces
+- [x] Helper functions: isBidirectional, getReverseType, getRelationshipsByCategory
+- [x] Relationship categories: semantic, causal, temporal, conflict, preference, structural
 
 ---
 
-### CRR-402: Implement Graph Service
+### CRR-402: Implement Graph Service ✅
 **Estimate**: 4 points
 **Labels**: graph, service
 **Blocked by**: CRR-401, CRR-102
+**Status**: COMPLETED
 
 Create graph operations for relationship-based retrieval and contradiction detection.
 
 **File**: `src/services/relationshipGraph.ts`
 
 **Acceptance Criteria**:
-- [ ] All relationship types supported
-- [ ] Graph traversal respects depth limits
-- [ ] Bidirectional relationships create two edges
-- [ ] Contradiction detection identifies potential conflicts
-- [ ] Traversal filters by type and strength
+- [x] All relationship types supported
+- [x] Graph traversal respects depth limits (BFS with configurable maxDepth)
+- [x] Bidirectional relationships create two edges
+- [x] Contradiction detection identifies potential conflicts
+- [x] Traversal filters by type and strength
+- [x] Additional features: cluster detection, supersession chains, graph stats
 
 ---
 

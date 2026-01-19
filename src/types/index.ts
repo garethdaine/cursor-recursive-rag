@@ -107,3 +107,6 @@ export * from './memory.js';
 
 // Re-export knowledge extraction types
 export * from './extractedKnowledge.js';
+
+// Re-export relationship types
+export * from './relationships.js';

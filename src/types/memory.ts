@@ -113,19 +113,36 @@ export interface ChunkRelationship {
  * Relationship types between chunks
  */
 export enum RelationshipType {
-  SOLVES = 'solves',
-  IMPLEMENTS = 'implements',
-  REFERENCES = 'references',
-  SUPERSEDES = 'supersedes',
-  CONTRADICTS = 'contradicts',
+  // Semantic relationships
   RELATES_TO = 'relates_to',
-  DERIVES_FROM = 'derives_from',
-  PART_OF = 'part_of',
   SIMILAR_TO = 'similar_to',
-  ALTERNATIVE_TO = 'alternative_to',
+  
+  // Causal relationships
+  LEADS_TO = 'leads_to',
+  DERIVES_FROM = 'derives_from',
+  SOLVES = 'solves',
+  
+  // Temporal relationships
+  SUPERSEDES = 'supersedes',
+  OCCURRED_BEFORE = 'occurred_before',
+  EVOLVED_INTO = 'evolved_into',
+  
+  // Conflict relationships
+  CONTRADICTS = 'contradicts',
+  INVALIDATED_BY = 'invalidated_by',
+  
+  // Preference relationships
+  PREFERS_OVER = 'prefers_over',
+  
+  // Structural relationships
+  PART_OF = 'part_of',
   DEPENDS_ON = 'depends_on',
+  IMPLEMENTS = 'implements',
+  EXEMPLIFIES = 'exemplifies',
   EXTENDS = 'extends',
+  REFERENCES = 'references',
   EXAMPLE_OF = 'example_of',
+  ALTERNATIVE_TO = 'alternative_to',
 }
 
 /**

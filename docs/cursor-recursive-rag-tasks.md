@@ -417,7 +417,7 @@ Orchestrate iterative retrieval with complexity assessment and action parsing.
 
 ---
 
-### CRR-803: Implement Smart Chunking Strategies
+### CRR-803: Implement Smart Chunking Strategies ✅
 **Estimate**: 3 points
 **Labels**: rlm, chunking
 **Blocked by**: CRR-801
@@ -427,15 +427,15 @@ Implement multiple chunking strategies based on RLM paper patterns.
 **File**: `src/services/smartChunker.ts`
 
 **Acceptance Criteria**:
-- [ ] Uniform chunking by count/size
-- [ ] Semantic chunking groups similar content (k-means)
-- [ ] Keyword-based chunking filters by patterns
-- [ ] Structural chunking groups by source file
-- [ ] Adaptive chunking chooses strategy based on content/query
+- [x] Uniform chunking by count/size (uniformChunk, uniformChunkEnhanced methods)
+- [x] Semantic chunking groups similar content (semanticChunk with k-means clustering)
+- [x] Keyword-based chunking filters by patterns (keywordChunk with regex)
+- [x] Structural chunking groups by source file (structuralChunk method)
+- [x] Adaptive chunking chooses strategy based on content/query (adaptiveChunk method)
 
 ---
 
-### CRR-804: Implement Anti-Pattern Mitigations
+### CRR-804: Implement Anti-Pattern Mitigations ✅
 **Estimate**: 3 points
 **Labels**: rlm, safety
 **Blocked by**: CRR-801, CRR-802
@@ -445,13 +445,13 @@ Implement safeguards from RLM paper's Negative Results section.
 **File**: `src/services/rlmSafeguards.ts`
 
 **Acceptance Criteria**:
-- [ ] Model-specific configurations (not one-size-fits-all)
-- [ ] Capability detection for code execution ability
-- [ ] Token budget management (reserve for answers)
-- [ ] Multi-signal termination detection (not just tags)
-- [ ] Sub-call throttling and caching
-- [ ] Circuit breaker for runaway trajectories
-- [ ] Model prior-based pre-filtering
+- [x] Model-specific configurations (MODEL_CONFIGS map with per-model settings)
+- [x] Capability detection for code execution ability (ModelCapabilities, getModelCapabilities)
+- [x] Token budget management (TokenBudgetManager with reserve ratio)
+- [x] Multi-signal termination detection (TerminationDetector with 4 signals)
+- [x] Sub-call throttling and caching (SubCallThrottler with MD5 cache keys)
+- [x] Circuit breaker for runaway trajectories (CircuitBreaker class)
+- [x] Model prior-based pre-filtering (PriorBasedFilter with keyword extraction)
 
 ---
 

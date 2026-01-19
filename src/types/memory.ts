@@ -243,6 +243,13 @@ export interface CodeBlock {
  * Hybrid search result with decay-adjusted scoring
  */
 export interface EnhancedSearchResult {
+  // Core result fields (compatible with SearchResult)
+  id: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  score: number;
+  
+  // Enhanced fields
   chunk: EnhancedChunk;
   similarityScore: number;
   decayAdjustedScore: number;
@@ -256,6 +263,7 @@ export interface EnhancedSearchResult {
  */
 export interface EnhancedSearchOptions {
   topK: number;
+  filter?: Record<string, unknown>;
   minDecayScore?: number;
   chunkTypes?: ChunkType[];
   includeArchived?: boolean;
@@ -267,4 +275,9 @@ export interface EnhancedSearchOptions {
   };
   includeRelated?: boolean;
   maxRelatedDepth?: number;
+  scoreWeights?: {
+    similarity: number;
+    decay: number;
+    importance: number;
+  };
 }

@@ -361,9 +361,18 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label class="block text-sm text-gray-400 mb-2">Rules Folder</label>
-              <input type="text" id="optimizer-folder" value="~/.cursor/rules" 
-                placeholder="e.g., ~/.cursor/rules or /path/to/rules"
-                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
+              <div class="flex gap-2">
+                <input type="text" id="optimizer-folder" value="~/.cursor/rules" 
+                  placeholder="e.g., ~/.cursor/rules or /path/to/rules"
+                  class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
+                <button onclick="selectRulesFolder()" type="button" 
+                  class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-1 text-sm"
+                  title="Browse for folder">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div>
               <label class="block text-sm text-gray-400 mb-2">Mode</label>
@@ -2255,6 +2264,115 @@
 
     // ==================== RULES OPTIMIZER ====================
     let optimizerRunning = false;
+
+    async function selectRulesFolder() {
+      // Try File System Access API first (Chrome, Edge, Opera)
+      if ('showDirectoryPicker' in window) {
+        try {
+          const dirHandle = await window.showDirectoryPicker({
+            mode: 'read',
+            startIn: 'documents',
+          });
+          
+          // Get the full path - note: this API doesn't give us the full path directly
+          // We need to ask the server to resolve it, or use the handle name
+          const folderName = dirHandle.name;
+          
+          // For security reasons, browsers don't expose full paths
+          // Show a modal to let user confirm/edit the path
+          const data = await showInputModal('Confirm Folder Path', [
+            { 
+              name: 'path', 
+              label: 'Selected Folder', 
+              value: folderName,
+              hint: 'Enter the full path to your rules folder (browser security prevents auto-detection)',
+              required: true 
+            },
+          ]);
+          
+          if (data && data.path) {
+            document.getElementById('optimizer-folder').value = data.path;
+            showToast(`Folder set to: ${data.path}`, 'success');
+          }
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            showToast('Folder selection failed: ' + e.message, 'error');
+          }
+        }
+      } else {
+        // Fallback: Show modal with common paths
+        const homeDir = await getHomeDirectory();
+        const commonPaths = [
+          { name: 'Cursor Rules', path: `${homeDir}/.cursor/rules` },
+          { name: 'Cursor Rules (Workspace)', path: '.cursor/rules' },
+          { name: 'Claude/Codex Skills', path: `${homeDir}/.codex/skills` },
+          { name: 'Custom Path', path: '' },
+        ];
+        
+        const content = `
+          <p class="text-sm text-gray-400 mb-4">Select a common rules folder or enter a custom path:</p>
+          <div class="space-y-2 mb-4">
+            ${commonPaths.map((p, i) => `
+              <button onclick="setFolderPath('${p.path}')" 
+                class="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="font-medium text-sm">${p.name}</div>
+                <div class="text-xs text-gray-500 truncate">${p.path || 'Enter manually...'}</div>
+              </button>
+            `).join('')}
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Or enter custom path:</label>
+            <input type="text" id="custom-folder-path" placeholder="/path/to/rules" 
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
+          </div>
+        `;
+        
+        const result = await showModal('Select Rules Folder', content, [
+          { label: 'Cancel', value: 'cancel' },
+          { label: 'Use Custom Path', value: 'custom', primary: true },
+        ]);
+        
+        if (result.value === 'custom') {
+          const customPath = document.getElementById('custom-folder-path')?.value;
+          if (customPath) {
+            document.getElementById('optimizer-folder').value = customPath;
+            showToast(`Folder set to: ${customPath}`, 'success');
+          }
+        }
+      }
+    }
+
+    function setFolderPath(path) {
+      if (path) {
+        document.getElementById('optimizer-folder').value = path;
+        closeModal();
+        showToast(`Folder set to: ${path}`, 'success');
+      } else {
+        // Focus the custom input
+        document.getElementById('custom-folder-path')?.focus();
+      }
+    }
+
+    async function getHomeDirectory() {
+      // Try to detect home directory from server
+      try {
+        const res = await fetch(`${API_BASE}/api/system/home`);
+        if (res.ok) {
+          const data = await res.json();
+          return data.home || '~';
+        }
+      } catch (e) {
+        // Fallback
+      }
+      
+      // Detect OS from user agent for fallback
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isWindows = navigator.platform.toUpperCase().indexOf('WIN') >= 0;
+      
+      if (isMac) return '/Users/' + (navigator.userAgent.match(/\b([a-z]+)\b/i)?.[1] || 'user');
+      if (isWindows) return 'C:\\Users\\' + (navigator.userAgent.match(/\b([a-z]+)\b/i)?.[1] || 'user');
+      return '~';
+    }
 
     function updateOptimizerStep(step, status) {
       const steps = document.querySelectorAll('.optimizer-step');

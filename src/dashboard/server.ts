@@ -764,6 +764,49 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       return;
     }
 
+    // Get system home directory
+    if (path === '/api/system/home' && req.method === 'GET') {
+      const home = process.env.HOME || process.env.USERPROFILE || '~';
+      res.end(JSON.stringify({ home }));
+      return;
+    }
+
+    // List directories (for folder browsing)
+    if (path === '/api/system/browse' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { directory } = JSON.parse(body);
+          const { readdirSync, statSync } = await import('fs');
+          const { join } = await import('path');
+          
+          // Expand ~ to home directory
+          const home = process.env.HOME || process.env.USERPROFILE || '';
+          const expandedDir = directory.replace(/^~/, home);
+          
+          const entries = readdirSync(expandedDir, { withFileTypes: true });
+          const folders = entries
+            .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+            .map(e => ({
+              name: e.name,
+              path: join(expandedDir, e.name),
+            }))
+            .slice(0, 50); // Limit results
+          
+          res.end(JSON.stringify({ 
+            current: expandedDir,
+            folders,
+            parent: join(expandedDir, '..'),
+          }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Failed to browse' }));
+        }
+      });
+      return;
+    }
+
     // ==================== RULES OPTIMIZER ENDPOINTS ====================
 
     // Analyze rules in a folder (step 1)

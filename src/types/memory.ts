@@ -214,30 +214,6 @@ export interface ProcessedConversation {
   knowledgeExtracted: number;
 }
 
-/**
- * Extracted knowledge from conversations
- */
-export interface ExtractedKnowledge {
-  type: 'solution' | 'pattern' | 'decision' | 'standard' | 'preference';
-  title: string;
-  content: string;
-  confidence: number;
-  sourceConversationId: string;
-  sourceMessageIndices: number[];
-  entities: EntityTag[];
-  codeBlocks?: CodeBlock[];
-}
-
-/**
- * Code block extracted from content
- */
-export interface CodeBlock {
-  language: string;
-  code: string;
-  context: string;
-  isBefore?: boolean;
-  isAfter?: boolean;
-}
 
 /**
  * Hybrid search result with decay-adjusted scoring

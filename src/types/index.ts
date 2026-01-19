@@ -104,3 +104,6 @@ export interface RecursiveQueryResult {
 
 // Re-export memory types
 export * from './memory.js';
+
+// Re-export knowledge extraction types
+export * from './extractedKnowledge.js';

@@ -15,6 +15,9 @@ import {
 } from '../../services/conversationProcessor.js';
 import { getMemoryMetadataStore } from '../../services/memoryMetadataStore.js';
 import { createEnhancedVectorStore } from '../../services/enhancedVectorStore.js';
+import { createKnowledgeExtractor } from '../../services/knowledgeExtractor.js';
+import { createKnowledgeStorageService } from '../../services/knowledgeStorage.js';
+import { countExtractedItems } from '../../types/extractedKnowledge.js';
 
 const chatCommand = new Command('chat')
   .description('Manage Cursor chat history integration');
@@ -102,6 +105,7 @@ chatCommand
   .option('--code-only', 'Only process conversations with code blocks')
   .option('--force', 'Re-process already processed conversations')
   .option('--dry-run', 'Show what would be processed without actually doing it')
+  .option('--extract', 'Extract knowledge (solutions, patterns, decisions) using LLM')
   .action(async (options) => {
     const spinner = ora('Loading configuration...').start();
 
@@ -167,7 +171,21 @@ chatCommand
         extractEntities: true,
       });
 
+      const knowledgeExtractor = options.extract ? createKnowledgeExtractor(config) : null;
+      const knowledgeStorage = options.extract 
+        ? createKnowledgeStorageService(enhancedStore, embedder) 
+        : null;
+
+      if (options.extract) {
+        if (knowledgeExtractor?.isLLMAvailable()) {
+          console.log(chalk.blue('📚 Knowledge extraction enabled (LLM mode)'));
+        } else {
+          console.log(chalk.yellow('📚 Knowledge extraction enabled (heuristic mode - set OpenAI API key for better results)'));
+        }
+      }
+
       let totalChunks = 0;
+      let totalKnowledge = 0;
       let processedCount = 0;
 
       console.log(chalk.cyan('\n🔄 Processing conversations...\n'));
@@ -210,20 +228,36 @@ chatCommand
 
           await enhancedStore.add(documents);
 
+          let knowledgeCount = 0;
+          if (knowledgeExtractor && knowledgeStorage) {
+            try {
+              const extracted = await knowledgeExtractor.extract(conversation);
+              knowledgeCount = countExtractedItems(extracted);
+              
+              if (knowledgeCount > 0) {
+                await knowledgeStorage.store(extracted);
+                totalKnowledge += knowledgeCount;
+              }
+            } catch (extractError) {
+              console.warn(chalk.yellow(`  Warning: Knowledge extraction failed for ${summary.id.substring(0, 8)}`));
+            }
+          }
+
           metadataStore.markConversationProcessed(
             summary.id,
             summary.messageCount,
             result.chunks.length,
-            0
+            knowledgeCount
           );
 
           totalChunks += result.chunks.length;
           processedCount++;
 
+          const knowledgeInfo = knowledgeCount > 0 ? `, ${knowledgeCount} knowledge items` : '';
           convSpinner.succeed(
             `Processed ${summary.id.substring(0, 8)}: ` +
             `${result.chunks.length} chunks, ` +
-            `${result.metadata.codeBlockCount} code blocks`
+            `${result.metadata.codeBlockCount} code blocks${knowledgeInfo}`
           );
 
         } catch (error) {
@@ -236,6 +270,9 @@ chatCommand
       console.log(chalk.green(`\n✅ Ingestion complete!`));
       console.log(chalk.cyan(`   Conversations processed: ${processedCount}`));
       console.log(chalk.cyan(`   Total chunks created: ${totalChunks}`));
+      if (options.extract) {
+        console.log(chalk.cyan(`   Knowledge items extracted: ${totalKnowledge}`));
+      }
 
     } catch (error) {
       spinner.fail('Ingestion failed');

@@ -117,21 +117,24 @@ Process raw conversations into structured chunks with embeddings.
 
 ---
 
-### CRR-203: Implement Chat History Ingestion CLI
+### CRR-203: Implement Chat History Ingestion CLI ✅
 **Estimate**: 2 points
 **Labels**: chat-history, cli
 **Blocked by**: CRR-201, CRR-202
+**Status**: COMPLETED
 
 Add CLI commands for chat history ingestion and watching.
 
-**File**: `src/cli/ingestChats.ts`
+**File**: `src/cli/commands/chat.ts`
 
 **Acceptance Criteria**:
-- [ ] `cursor-rag chat ingest` ingests new conversations
-- [ ] `cursor-rag chat list` shows available conversations
-- [ ] `cursor-rag chat watch` runs in background mode
-- [ ] Already-processed conversations are skipped
-- [ ] Progress displayed during ingestion
+- [x] `cursor-rag chat ingest` ingests new conversations
+- [x] `cursor-rag chat list` shows available conversations
+- [x] `cursor-rag chat watch` runs in background mode
+- [x] Already-processed conversations are skipped
+- [x] Progress displayed during ingestion
+- [x] `cursor-rag chat stats` shows ingestion statistics
+- [x] `cursor-rag chat reset` resets processing status
 
 ---
 

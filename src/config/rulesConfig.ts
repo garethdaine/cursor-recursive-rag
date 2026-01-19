@@ -92,6 +92,20 @@ export const LLMConfigSchema = z.object({
 export type LLMConfig = z.infer<typeof LLMConfigSchema>;
 
 /**
+ * Natural language rule (interpreted by LLM)
+ */
+export const NaturalRuleSchema = z.object({
+  /** The rule description in plain English */
+  rule: z.string(),
+  /** Severity level */
+  severity: z.enum(['error', 'warning', 'info']).default('warning'),
+  /** Whether this rule is enabled */
+  enabled: z.boolean().default(true),
+});
+
+export type NaturalRule = z.infer<typeof NaturalRuleSchema>;
+
+/**
  * Full rules analyzer configuration
  */
 export const RulesAnalyzerConfigSchema = z.object({
@@ -113,6 +127,9 @@ export const RulesAnalyzerConfigSchema = z.object({
 
   /** LLM provider configuration */
   llm: LLMConfigSchema.default({}),
+
+  /** Natural language rules (LLM-interpreted) */
+  naturalRules: z.array(NaturalRuleSchema).default([]),
 
   /** Custom version checks */
   versionChecks: z.array(VersionCheckSchema).default([]),
@@ -159,6 +176,7 @@ export const DEFAULT_RULES_CONFIG: RulesAnalyzerConfig = {
     useLLM: false,
   },
   llm: {},
+  naturalRules: [],
   versionChecks: [],
   deprecationPatterns: [],
   tagPatterns: [],

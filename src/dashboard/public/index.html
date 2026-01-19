@@ -35,9 +35,24 @@
       50% { opacity: 0.5; }
     }
     .pulse-dot { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .modal-backdrop { backdrop-filter: blur(4px); }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen">
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+  <!-- Generic Modal -->
+  <div id="app-modal" class="fixed inset-0 bg-black/70 modal-backdrop z-40 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full shadow-2xl">
+      <div class="p-6">
+        <h3 id="modal-title" class="text-lg font-semibold mb-4"></h3>
+        <div id="modal-content"></div>
+      </div>
+      <div id="modal-footer" class="flex justify-end gap-3 px-6 py-4 border-t border-gray-800"></div>
+    </div>
+  </div>
+
   <div id="app" class="flex">
     <!-- Sidebar -->
     <aside class="w-64 bg-gray-900 border-r border-gray-800 min-h-screen p-4 fixed">
@@ -626,7 +641,7 @@
             <div class="mb-6">
               <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-medium text-gray-300">Version Check Patterns</h4>
-                <button onclick="addVersionCheck()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                <button onclick="showAddVersionCheckModal()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                   </svg>
@@ -644,7 +659,7 @@
             <div class="mb-6">
               <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-medium text-gray-300">Deprecation Patterns</h4>
-                <button onclick="addDeprecationPattern()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                <button onclick="showAddDeprecationModal()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                   </svg>
@@ -656,6 +671,33 @@
                 <!-- Deprecation patterns will be populated here -->
               </div>
               <div id="deprecation-patterns-empty" class="text-sm text-gray-500 italic hidden">No deprecation patterns configured. Click "Add Pattern" to create one.</div>
+            </div>
+
+            <!-- Natural Language Rules (LLM-powered) -->
+            <div id="natural-language-rules-section" class="mb-6 hidden">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                  </svg>
+                  Natural Language Rules
+                  <span class="text-xs bg-purple-600/30 text-purple-400 px-2 py-0.5 rounded">LLM</span>
+                </h4>
+                <button onclick="showAddNaturalRuleModal()" class="text-xs bg-purple-800 hover:bg-purple-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add Rule
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mb-3">
+                Define rules in plain English. The LLM will interpret these when analyzing your code rules.
+                <br>Examples: "Flag any mention of jQuery", "Warn if using class components in React"
+              </p>
+              <div id="natural-rules-list" class="space-y-2">
+                <!-- Natural language rules will be populated here -->
+              </div>
+              <div id="natural-rules-empty" class="text-sm text-gray-500 italic">No natural language rules configured. Click "Add Rule" to create one.</div>
             </div>
 
             <!-- Example Templates -->
@@ -738,6 +780,138 @@
     let gatewayUrl = 'http://localhost:3010';
     let allGatewayTools = [];
     let currentBackendFilter = '';
+
+    // ==================== MODAL & TOAST SYSTEM ====================
+    let modalResolve = null;
+    
+    function showToast(message, type = 'info', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      const colors = {
+        success: 'bg-green-600 border-green-500',
+        error: 'bg-red-600 border-red-500',
+        warning: 'bg-yellow-600 border-yellow-500',
+        info: 'bg-primary-600 border-primary-500',
+      };
+      
+      const icons = {
+        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+        warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+      };
+      
+      toast.className = `flex items-center gap-3 px-4 py-3 rounded-lg border ${colors[type]} text-white shadow-lg transform transition-all duration-300 translate-x-full`;
+      toast.innerHTML = `
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[type]}</svg>
+        <span class="text-sm">${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-x-full');
+      });
+      
+      // Remove after duration
+      setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    function showModal(title, content, buttons = []) {
+      return new Promise((resolve) => {
+        modalResolve = resolve;
+        
+        const modal = document.getElementById('app-modal');
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-content').innerHTML = content;
+        
+        const footer = document.getElementById('modal-footer');
+        footer.innerHTML = buttons.map((btn, idx) => `
+          <button onclick="handleModalButton(${idx}, '${btn.value || ''}')" 
+            class="px-4 py-2 rounded-lg transition-colors text-sm ${btn.primary ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-700 hover:bg-gray-600'}">
+            ${btn.label}
+          </button>
+        `).join('');
+        
+        modal.classList.remove('hidden');
+      });
+    }
+
+    function handleModalButton(index, value) {
+      const modal = document.getElementById('app-modal');
+      modal.classList.add('hidden');
+      
+      if (modalResolve) {
+        // Get form values if any
+        const form = document.getElementById('modal-content').querySelector('form');
+        if (form) {
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData.entries());
+          modalResolve({ index, value, data });
+        } else {
+          modalResolve({ index, value });
+        }
+        modalResolve = null;
+      }
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('app-modal');
+      modal.classList.add('hidden');
+      if (modalResolve) {
+        modalResolve({ index: -1, value: 'cancel' });
+        modalResolve = null;
+      }
+    }
+
+    // Close modal on escape or backdrop click
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+    document.getElementById('app-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'app-modal') closeModal();
+    });
+
+    async function showConfirmModal(title, message) {
+      const result = await showModal(title, `<p class="text-gray-300">${message}</p>`, [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Confirm', value: 'confirm', primary: true },
+      ]);
+      return result.value === 'confirm';
+    }
+
+    async function showInputModal(title, fields) {
+      const formHtml = `
+        <form class="space-y-4">
+          ${fields.map(f => `
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">${f.label}${f.required ? ' <span class="text-red-400">*</span>' : ''}</label>
+              ${f.type === 'textarea' 
+                ? `<textarea name="${f.name}" placeholder="${f.placeholder || ''}" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white" ${f.required ? 'required' : ''}>${f.value || ''}</textarea>`
+                : `<input type="${f.type || 'text'}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.value || ''}" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white" ${f.required ? 'required' : ''}>`
+              }
+              ${f.hint ? `<p class="text-xs text-gray-500 mt-1">${f.hint}</p>` : ''}
+            </div>
+          `).join('')}
+        </form>
+      `;
+      
+      const result = await showModal(title, formHtml, [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Add', value: 'submit', primary: true },
+      ]);
+      
+      if (result.value === 'submit' && result.data) {
+        return result.data;
+      }
+      return null;
+    }
+    // ==================== END MODAL & TOAST SYSTEM ====================
 
     // Tab Navigation
     function showTab(tabId) {
@@ -1167,13 +1341,13 @@
         });
         
         if (res.ok) {
-          alert('Settings saved successfully!');
+          showToast('Settings saved successfully!', 'success');
           refreshAll();
         } else {
-          alert('Failed to save settings');
+          showToast('Failed to save settings', 'error');
         }
       } catch (e) {
-        alert('Failed to save settings: ' + e.message);
+        showToast('Failed to save settings: ' + e.message, 'error');
       }
     }
 
@@ -1727,6 +1901,7 @@
         
         renderVersionChecks();
         renderDeprecationPatterns();
+        renderNaturalRules();
         renderTemplates();
         
         // Load LLM config
@@ -1773,15 +1948,18 @@
 
     function toggleLLMSettings() {
       const checkbox = document.getElementById('rules-use-llm');
-      const section = document.getElementById('llm-settings-section');
+      const llmSection = document.getElementById('llm-settings-section');
+      const naturalRulesSection = document.getElementById('natural-language-rules-section');
       
       if (checkbox.checked) {
-        section.classList.remove('hidden');
+        llmSection.classList.remove('hidden');
+        naturalRulesSection.classList.remove('hidden');
         if (!llmConfigured) {
           updateLLMStatus(false, 'Please configure an LLM provider below');
         }
       } else {
-        section.classList.add('hidden');
+        llmSection.classList.add('hidden');
+        naturalRulesSection.classList.add('hidden');
       }
     }
 
@@ -1831,12 +2009,12 @@
       const baseUrl = document.getElementById('llm-base-url').value;
       
       if (!provider) {
-        alert('Please select a provider first');
+        showToast('Please select a provider first', 'warning');
         return;
       }
       
       if (provider !== 'ollama' && !apiKey) {
-        alert('Please enter an API key');
+        showToast('Please enter an API key', 'warning');
         return;
       }
       
@@ -1863,12 +2041,15 @@
           document.getElementById('llm-model-container').classList.remove('hidden');
           document.getElementById('llm-save-btn').disabled = false;
           updateLLMStatus(true, `Connected! ${data.models.length} models available`);
+          showToast('Connection successful!', 'success');
         } else {
           updateLLMStatus(false, data.error || 'Connection failed');
           document.getElementById('llm-save-btn').disabled = true;
+          showToast(data.error || 'Connection failed', 'error');
         }
       } catch (e) {
         updateLLMStatus(false, 'Connection error: ' + e.message);
+        showToast('Connection error: ' + e.message, 'error');
       } finally {
         testBtn.disabled = false;
         testBtn.textContent = 'Test';
@@ -1882,7 +2063,7 @@
       const model = document.getElementById('llm-model').value;
       
       if (!provider) {
-        alert('Please select a provider');
+        showToast('Please select a provider', 'warning');
         return;
       }
       
@@ -1905,12 +2086,12 @@
           updateLLMStatus(true, `${provider} configured${model ? ` (${model})` : ''}`);
           document.getElementById('llm-api-key').placeholder = '***configured*** (enter new key to change)';
           document.getElementById('llm-api-key').value = '';
-          alert('LLM configuration saved!');
+          showToast('LLM configuration saved!', 'success');
         } else {
-          alert('Error: ' + data.error);
+          showToast('Error: ' + data.error, 'error');
         }
       } catch (e) {
-        alert('Failed to save: ' + e.message);
+        showToast('Failed to save: ' + e.message, 'error');
       }
     }
 
@@ -2010,7 +2191,7 @@
         rulesConfig.versionChecks[index].enabled = !rulesConfig.versionChecks[index].enabled;
         renderVersionChecks();
       } catch (e) {
-        alert('Failed to toggle: ' + e.message);
+        showToast('Failed to toggle: ' + e.message, 'error');
       }
     }
 
@@ -2020,47 +2201,51 @@
         rulesConfig.deprecationPatterns[index].enabled = !rulesConfig.deprecationPatterns[index].enabled;
         renderDeprecationPatterns();
       } catch (e) {
-        alert('Failed to toggle: ' + e.message);
+        showToast('Failed to toggle: ' + e.message, 'error');
       }
     }
 
     async function deleteVersionCheck(index) {
-      if (!confirm('Delete this version check?')) return;
+      const confirmed = await showConfirmModal('Delete Version Check', 'Are you sure you want to delete this version check pattern?');
+      if (!confirmed) return;
       try {
         await fetch(`${API_BASE}/api/rules/config/version-checks/${index}`, { method: 'DELETE' });
         rulesConfig.versionChecks.splice(index, 1);
         renderVersionChecks();
+        showToast('Version check deleted', 'success');
       } catch (e) {
-        alert('Failed to delete: ' + e.message);
+        showToast('Failed to delete: ' + e.message, 'error');
       }
     }
 
     async function deleteDeprecationPattern(index) {
-      if (!confirm('Delete this deprecation pattern?')) return;
+      const confirmed = await showConfirmModal('Delete Deprecation Pattern', 'Are you sure you want to delete this deprecation pattern?');
+      if (!confirmed) return;
       try {
         await fetch(`${API_BASE}/api/rules/config/deprecation-patterns/${index}`, { method: 'DELETE' });
         rulesConfig.deprecationPatterns.splice(index, 1);
         renderDeprecationPatterns();
+        showToast('Deprecation pattern deleted', 'success');
       } catch (e) {
-        alert('Failed to delete: ' + e.message);
+        showToast('Failed to delete: ' + e.message, 'error');
       }
     }
 
-    function addVersionCheck() {
-      const name = prompt('Technology name (e.g., "Python"):');
-      if (!name) return;
-      const pattern = prompt('Regex pattern (e.g., "\\\\bpython\\\\s+(\\\\d+)"):');
-      if (!pattern) return;
-      const version = prompt('Current version (e.g., "3.12"):');
-      if (!version) return;
+    async function showAddVersionCheckModal() {
+      const data = await showInputModal('Add Version Check Pattern', [
+        { name: 'name', label: 'Technology Name', placeholder: 'e.g., Python', required: true },
+        { name: 'pattern', label: 'Regex Pattern', placeholder: 'e.g., \\bpython\\s+(\\d+)', required: true, hint: 'Use one capture group for version number' },
+        { name: 'version', label: 'Current Version', placeholder: 'e.g., 3.12', required: true },
+      ]);
       
-      addVersionCheckFromTemplate(name, pattern, version);
+      if (data) {
+        await addVersionCheckFromTemplate(data.name, data.pattern, data.version);
+      }
     }
 
     async function addVersionCheckFromTemplate(name, pattern, version) {
-      // Check if already exists
       if (rulesConfig.versionChecks.some(v => v.name === name)) {
-        alert(`${name} version check already exists`);
+        showToast(`${name} version check already exists`, 'warning');
         return;
       }
       
@@ -2072,32 +2257,33 @@
         });
         const data = await res.json();
         if (data.error) {
-          alert('Error: ' + data.error);
+          showToast('Error: ' + data.error, 'error');
           return;
         }
         rulesConfig = data.config;
         renderVersionChecks();
+        showToast(`Added ${name} version check`, 'success');
       } catch (e) {
-        alert('Failed to add: ' + e.message);
+        showToast('Failed to add: ' + e.message, 'error');
       }
     }
 
-    function addDeprecationPattern() {
-      const name = prompt('Pattern name (e.g., "var-usage"):');
-      if (!name) return;
-      const pattern = prompt('Regex pattern:');
-      if (!pattern) return;
-      const reason = prompt('Why is this deprecated?');
-      if (!reason) return;
-      const suggestion = prompt('Suggested alternative (optional):');
+    async function showAddDeprecationModal() {
+      const data = await showInputModal('Add Deprecation Pattern', [
+        { name: 'name', label: 'Pattern Name', placeholder: 'e.g., var-usage', required: true },
+        { name: 'pattern', label: 'Regex Pattern', placeholder: 'e.g., \\bvar\\s+\\w+\\s*=', required: true },
+        { name: 'reason', label: 'Why is this deprecated?', placeholder: 'e.g., var is discouraged in modern JavaScript', required: true },
+        { name: 'suggestion', label: 'Suggested Alternative', placeholder: 'e.g., Use const or let instead' },
+      ]);
       
-      addDeprecationFromTemplate(name, pattern, reason, suggestion);
+      if (data) {
+        await addDeprecationFromTemplate(data.name, data.pattern, data.reason, data.suggestion);
+      }
     }
 
     async function addDeprecationFromTemplate(name, pattern, reason, suggestion = '') {
-      // Check if already exists
       if (rulesConfig.deprecationPatterns.some(d => d.name === name)) {
-        alert(`${name} deprecation pattern already exists`);
+        showToast(`${name} deprecation pattern already exists`, 'warning');
         return;
       }
       
@@ -2109,14 +2295,87 @@
         });
         const data = await res.json();
         if (data.error) {
-          alert('Error: ' + data.error);
+          showToast('Error: ' + data.error, 'error');
           return;
         }
         rulesConfig = data.config;
         renderDeprecationPatterns();
+        showToast(`Added ${name} deprecation pattern`, 'success');
       } catch (e) {
-        alert('Failed to add: ' + e.message);
+        showToast('Failed to add: ' + e.message, 'error');
       }
+    }
+
+    // Natural Language Rules
+    async function showAddNaturalRuleModal() {
+      const data = await showInputModal('Add Natural Language Rule', [
+        { name: 'rule', label: 'Rule Description', type: 'textarea', placeholder: 'e.g., Flag any mention of jQuery or legacy DOM manipulation patterns', required: true, hint: 'Describe in plain English what the LLM should look for when analyzing rules' },
+        { name: 'severity', label: 'Severity', placeholder: 'warning, error, or info', value: 'warning' },
+      ]);
+      
+      if (data && data.rule) {
+        await addNaturalRule(data.rule, data.severity || 'warning');
+      }
+    }
+
+    async function addNaturalRule(rule, severity) {
+      if (!rulesConfig.naturalRules) {
+        rulesConfig.naturalRules = [];
+      }
+      
+      rulesConfig.naturalRules.push({ rule, severity, enabled: true });
+      renderNaturalRules();
+      showToast('Natural language rule added', 'success');
+    }
+
+    async function toggleNaturalRule(index) {
+      rulesConfig.naturalRules[index].enabled = !rulesConfig.naturalRules[index].enabled;
+      renderNaturalRules();
+    }
+
+    async function deleteNaturalRule(index) {
+      const confirmed = await showConfirmModal('Delete Natural Language Rule', 'Are you sure you want to delete this rule?');
+      if (!confirmed) return;
+      rulesConfig.naturalRules.splice(index, 1);
+      renderNaturalRules();
+      showToast('Natural language rule deleted', 'success');
+    }
+
+    function renderNaturalRules() {
+      const list = document.getElementById('natural-rules-list');
+      const empty = document.getElementById('natural-rules-empty');
+      
+      if (!rulesConfig.naturalRules || rulesConfig.naturalRules.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      empty.classList.add('hidden');
+      const severityColors = {
+        error: 'bg-red-600/30 text-red-400',
+        warning: 'bg-yellow-600/30 text-yellow-400',
+        info: 'bg-blue-600/30 text-blue-400',
+      };
+      
+      list.innerHTML = rulesConfig.naturalRules.map((nr, index) => `
+        <div class="flex items-start gap-3 bg-gray-800 rounded-lg p-3 ${!nr.enabled ? 'opacity-50' : ''}">
+          <input type="checkbox" ${nr.enabled ? 'checked' : ''} 
+            onchange="toggleNaturalRule(${index})"
+            class="w-4 h-4 mt-1 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs px-2 py-0.5 rounded ${severityColors[nr.severity] || severityColors.warning}">${nr.severity}</span>
+            </div>
+            <p class="text-sm text-gray-300">${escapeHtml(nr.rule)}</p>
+          </div>
+          <button onclick="deleteNaturalRule(${index})" class="text-gray-500 hover:text-red-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      `).join('');
     }
 
     async function saveRulesConfig() {
@@ -2136,12 +2395,12 @@
         });
         const data = await res.json();
         if (data.error) {
-          alert('Error: ' + data.error);
+          showToast('Error: ' + data.error, 'error');
           return;
         }
-        alert('Rules configuration saved!');
+        showToast('Rules configuration saved!', 'success');
       } catch (e) {
-        alert('Failed to save: ' + e.message);
+        showToast('Failed to save: ' + e.message, 'error');
       }
     }
 

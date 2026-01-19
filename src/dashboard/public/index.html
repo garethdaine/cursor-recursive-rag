@@ -2265,81 +2265,108 @@
     // ==================== RULES OPTIMIZER ====================
     let optimizerRunning = false;
 
+    let currentBrowsePath = '';
+    
     async function selectRulesFolder() {
-      // Try File System Access API first (Chrome, Edge, Opera)
-      if ('showDirectoryPicker' in window) {
-        try {
-          const dirHandle = await window.showDirectoryPicker({
-            mode: 'read',
-            startIn: 'documents',
-          });
-          
-          // Get the full path - note: this API doesn't give us the full path directly
-          // We need to ask the server to resolve it, or use the handle name
-          const folderName = dirHandle.name;
-          
-          // For security reasons, browsers don't expose full paths
-          // Show a modal to let user confirm/edit the path
-          const data = await showInputModal('Confirm Folder Path', [
-            { 
-              name: 'path', 
-              label: 'Selected Folder', 
-              value: folderName,
-              hint: 'Enter the full path to your rules folder (browser security prevents auto-detection)',
-              required: true 
-            },
-          ]);
-          
-          if (data && data.path) {
-            document.getElementById('optimizer-folder').value = data.path;
-            showToast(`Folder set to: ${data.path}`, 'success');
-          }
-        } catch (e) {
-          if (e.name !== 'AbortError') {
-            showToast('Folder selection failed: ' + e.message, 'error');
-          }
-        }
-      } else {
-        // Fallback: Show modal with common paths
-        const homeDir = await getHomeDirectory();
-        const commonPaths = [
-          { name: 'Cursor Rules', path: `${homeDir}/.cursor/rules` },
-          { name: 'Cursor Rules (Workspace)', path: '.cursor/rules' },
-          { name: 'Claude/Codex Skills', path: `${homeDir}/.codex/skills` },
-          { name: 'Custom Path', path: '' },
-        ];
+      const homeDir = await getHomeDirectory();
+      currentBrowsePath = homeDir;
+      
+      await showFolderBrowser(homeDir);
+    }
+
+    async function showFolderBrowser(startPath) {
+      currentBrowsePath = startPath;
+      
+      // Fetch directory listing from server
+      let folders = [];
+      let currentDir = startPath;
+      let parentDir = '';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/system/browse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ directory: startPath })
+        });
         
-        const content = `
-          <p class="text-sm text-gray-400 mb-4">Select a common rules folder or enter a custom path:</p>
-          <div class="space-y-2 mb-4">
-            ${commonPaths.map((p, i) => `
-              <button onclick="setFolderPath('${p.path}')" 
-                class="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
-                <div class="font-medium text-sm">${p.name}</div>
-                <div class="text-xs text-gray-500 truncate">${p.path || 'Enter manually...'}</div>
+        if (res.ok) {
+          const data = await res.json();
+          folders = data.folders || [];
+          currentDir = data.current || startPath;
+          parentDir = data.parent || '';
+        }
+      } catch (e) {
+        console.error('Failed to browse:', e);
+      }
+      
+      const homeDir = await getHomeDirectory();
+      const quickPaths = [
+        { name: '🏠 Home', path: homeDir },
+        { name: '📁 .cursor/rules', path: `${homeDir}/.cursor/rules` },
+        { name: '📁 .codex/skills', path: `${homeDir}/.codex/skills` },
+      ];
+      
+      const content = `
+        <div class="mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <button onclick="navigateToFolder('${parentDir.replace(/'/g, "\\'")}')" 
+              class="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors ${!parentDir ? 'opacity-50 cursor-not-allowed' : ''}"
+              ${!parentDir ? 'disabled' : ''} title="Go up">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+              </svg>
+            </button>
+            <input type="text" id="browse-path-input" value="${currentDir}" 
+              class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono"
+              onkeydown="if(event.key==='Enter') navigateToFolder(this.value)">
+            <button onclick="navigateToFolder(document.getElementById('browse-path-input').value)" 
+              class="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm">Go</button>
+          </div>
+          
+          <div class="flex gap-2 mb-3 flex-wrap">
+            ${quickPaths.map(p => `
+              <button onclick="navigateToFolder('${p.path.replace(/'/g, "\\'")}')" 
+                class="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
+                ${p.name}
               </button>
             `).join('')}
           </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-2">Or enter custom path:</label>
-            <input type="text" id="custom-folder-path" placeholder="/path/to/rules" 
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
-          </div>
-        `;
+        </div>
         
-        const result = await showModal('Select Rules Folder', content, [
-          { label: 'Cancel', value: 'cancel' },
-          { label: 'Use Custom Path', value: 'custom', primary: true },
-        ]);
-        
-        if (result.value === 'custom') {
-          const customPath = document.getElementById('custom-folder-path')?.value;
-          if (customPath) {
-            document.getElementById('optimizer-folder').value = customPath;
-            showToast(`Folder set to: ${customPath}`, 'success');
+        <div class="max-h-64 overflow-y-auto border border-gray-700 rounded-lg">
+          ${folders.length === 0 
+            ? '<p class="text-gray-500 text-sm p-4 text-center">No subfolders found</p>'
+            : folders.map(f => `
+              <button onclick="navigateToFolder('${f.path.replace(/'/g, "\\'")}')" 
+                class="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800 transition-colors text-left border-b border-gray-800 last:border-0">
+                <svg class="w-5 h-5 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+                </svg>
+                <span class="text-sm truncate">${f.name}</span>
+              </button>
+            `).join('')
           }
-        }
+        </div>
+        
+        <p class="text-xs text-gray-500 mt-3">Click a folder to navigate, or use "Select This Folder" to choose the current directory.</p>
+      `;
+      
+      const result = await showModal('Browse for Rules Folder', content, [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Select This Folder', value: 'select', primary: true },
+      ]);
+      
+      if (result.value === 'select') {
+        const selectedPath = document.getElementById('browse-path-input')?.value || currentDir;
+        document.getElementById('optimizer-folder').value = selectedPath;
+        showToast(`Folder set to: ${selectedPath}`, 'success');
       }
+    }
+
+    async function navigateToFolder(path) {
+      if (!path) return;
+      closeModal();
+      await showFolderBrowser(path);
     }
 
     function setFolderPath(path) {
@@ -2347,14 +2374,10 @@
         document.getElementById('optimizer-folder').value = path;
         closeModal();
         showToast(`Folder set to: ${path}`, 'success');
-      } else {
-        // Focus the custom input
-        document.getElementById('custom-folder-path')?.focus();
       }
     }
 
     async function getHomeDirectory() {
-      // Try to detect home directory from server
       try {
         const res = await fetch(`${API_BASE}/api/system/home`);
         if (res.ok) {
@@ -2364,13 +2387,6 @@
       } catch (e) {
         // Fallback
       }
-      
-      // Detect OS from user agent for fallback
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const isWindows = navigator.platform.toUpperCase().indexOf('WIN') >= 0;
-      
-      if (isMac) return '/Users/' + (navigator.userAgent.match(/\b([a-z]+)\b/i)?.[1] || 'user');
-      if (isWindows) return 'C:\\Users\\' + (navigator.userAgent.match(/\b([a-z]+)\b/i)?.[1] || 'user');
       return '~';
     }
 

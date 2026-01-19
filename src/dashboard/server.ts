@@ -777,27 +777,55 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       req.on('data', chunk => body += chunk);
       req.on('end', async () => {
         try {
-          const { directory } = JSON.parse(body);
-          const { readdirSync, statSync } = await import('fs');
-          const { join } = await import('path');
+          const { directory, showHidden = true } = JSON.parse(body);
+          const { readdirSync, statSync, existsSync } = await import('fs');
+          const { join, resolve, dirname } = await import('path');
           
           // Expand ~ to home directory
           const home = process.env.HOME || process.env.USERPROFILE || '';
-          const expandedDir = directory.replace(/^~/, home);
+          let expandedDir = directory.replace(/^~/, home);
+          
+          // Resolve to absolute path
+          expandedDir = resolve(expandedDir);
+          
+          // Check if directory exists
+          if (!existsSync(expandedDir)) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: `Directory not found: ${expandedDir}` }));
+            return;
+          }
           
           const entries = readdirSync(expandedDir, { withFileTypes: true });
           const folders = entries
-            .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+            .filter(e => {
+              if (!e.isDirectory()) return false;
+              // Show important hidden folders like .cursor, .codex, .config
+              if (e.name.startsWith('.')) {
+                const importantHidden = ['.cursor', '.codex', '.config', '.local', '.npm', '.vscode', '.git'];
+                return showHidden && importantHidden.some(h => e.name === h || e.name.startsWith(h + '-'));
+              }
+              return true;
+            })
             .map(e => ({
               name: e.name,
               path: join(expandedDir, e.name),
             }))
-            .slice(0, 50); // Limit results
+            .sort((a, b) => {
+              // Sort: hidden folders first, then alphabetically
+              const aHidden = a.name.startsWith('.');
+              const bHidden = b.name.startsWith('.');
+              if (aHidden && !bHidden) return -1;
+              if (!aHidden && bHidden) return 1;
+              return a.name.localeCompare(b.name);
+            })
+            .slice(0, 100); // Limit results
+          
+          const parent = dirname(expandedDir);
           
           res.end(JSON.stringify({ 
             current: expandedDir,
             folders,
-            parent: join(expandedDir, '..'),
+            parent: parent !== expandedDir ? parent : '', // Empty if at root
           }));
         } catch (e) {
           res.statusCode = 400;

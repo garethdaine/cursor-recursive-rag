@@ -306,71 +306,50 @@ export class RulesAnalyzer {
   }
 
   /**
-   * Find outdated rules
+   * Find potentially outdated rules based on age
+   * 
+   * Note: We intentionally avoid hardcoding specific technology versions
+   * since they change frequently and vary by user preference. Instead,
+   * we flag rules based on:
+   * - File age (hasn't been modified in a long time)
+   * - Explicit version references that users can customize
    */
   findOutdatedRules(rules: ParsedRule[]): OutdatedRule[] {
     const outdated: OutdatedRule[] = [];
-
-    // Patterns that indicate outdated content
-    const outdatedPatterns = [
-      { pattern: /\blaravel\s+(\d+)/i, current: '11', tech: 'Laravel' },
-      { pattern: /\bphp\s+(\d+\.?\d*)/i, current: '8.3', tech: 'PHP' },
-      { pattern: /\bnode\.?js?\s+(\d+)/i, current: '22', tech: 'Node.js' },
-      { pattern: /\breact\s+(\d+)/i, current: '19', tech: 'React' },
-      { pattern: /\bvue\s+(\d+)/i, current: '3', tech: 'Vue' },
-      { pattern: /\bnuxt\s+(\d+)/i, current: '4', tech: 'Nuxt' },
-      { pattern: /\btypescript\s+(\d+\.?\d*)/i, current: '5.7', tech: 'TypeScript' },
-      { pattern: /\bnext\.?js?\s+(\d+)/i, current: '15', tech: 'Next.js' },
-      { pattern: /\btailwind\s+(\d+)/i, current: '4', tech: 'Tailwind' },
-    ];
-
-    // Deprecated patterns
-    const deprecatedPatterns = [
-      { pattern: /\bclass\s+\w+\s+extends\s+Component\b/i, reason: 'Class components are deprecated in React' },
-      { pattern: /\bdefineComponent\b/i, reason: 'Vue 2 style defineComponent' },
-      { pattern: /\bvar\s+\w+\s*=/g, reason: 'var is deprecated, use const/let' },
-      { pattern: /\b(callback|cb)\s*\(/gi, reason: 'Callbacks are outdated, use async/await' },
-    ];
 
     for (const rule of rules) {
       const outdatedReferences: OutdatedRule['outdatedReferences'] = [];
       let maxConfidence = 0;
 
-      // Check version references
-      for (const { pattern, current, tech } of outdatedPatterns) {
-        const match = rule.content.match(pattern);
-        if (match?.[1]) {
-          const mentionedVersion = parseFloat(match[1]);
-          const currentVersion = parseFloat(current);
-          
-          if (mentionedVersion < currentVersion) {
-            outdatedReferences.push({
-              reference: `${tech} ${match[1]}`,
-              currentVersion: current,
-              suggestedUpdate: `${tech} ${current}`,
-            });
-            maxConfidence = Math.max(maxConfidence, 0.8);
-          }
-        }
-      }
-
-      // Check deprecated patterns
-      for (const { pattern, reason } of deprecatedPatterns) {
-        if (pattern.test(rule.content)) {
-          outdatedReferences.push({
-            reference: reason,
-          });
-          maxConfidence = Math.max(maxConfidence, 0.6);
-        }
-      }
-
-      // Check rule age
+      // Check rule age - flag if not modified in over a year
       const daysSinceModified = (Date.now() - rule.sourceFile.lastModified.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceModified > 365 && outdatedReferences.length === 0) {
+      if (daysSinceModified > 365) {
         outdatedReferences.push({
           reference: `Rule hasn't been updated in ${Math.floor(daysSinceModified)} days`,
         });
         maxConfidence = Math.max(maxConfidence, 0.4);
+      }
+
+      // Flag rules that reference very old years explicitly
+      const oldYearMatch = rule.content.match(/\b(201[0-9]|202[0-3])\b/);
+      if (oldYearMatch) {
+        const year = parseInt(oldYearMatch[1]);
+        const currentYear = new Date().getFullYear();
+        if (currentYear - year >= 2) {
+          outdatedReferences.push({
+            reference: `References year ${year} - may need review`,
+          });
+          maxConfidence = Math.max(maxConfidence, 0.3);
+        }
+      }
+
+      // Flag if rule contains "deprecated" or "legacy" but isn't about migration
+      if (/\b(deprecated|legacy|obsolete)\b/i.test(rule.content) &&
+          !/\b(migrat|upgrad|replac)\b/i.test(rule.content)) {
+        outdatedReferences.push({
+          reference: 'Rule discusses deprecated/legacy patterns',
+        });
+        maxConfidence = Math.max(maxConfidence, 0.5);
       }
 
       if (outdatedReferences.length > 0) {
@@ -378,7 +357,7 @@ export class RulesAnalyzer {
           rule,
           reason: outdatedReferences.map(r => r.reference).join('; '),
           confidence: maxConfidence,
-          action: maxConfidence > 0.7 ? 'update' : 'review',
+          action: 'review',
           outdatedReferences,
         });
       }

@@ -458,43 +458,63 @@ export class RulesParser {
       fmTags.forEach(t => tags.add(t));
     }
 
-    // Technology detection patterns
-    const techPatterns: Record<string, RegExp> = {
-      typescript: /\b(typescript|\.ts|\.tsx)\b/i,
-      javascript: /\b(javascript|\.js|\.jsx)\b/i,
-      react: /\breact\b/i,
-      vue: /\bvue\b/i,
-      angular: /\bangular\b/i,
-      svelte: /\bsvelte\b/i,
-      node: /\bnode\.?js\b/i,
-      python: /\bpython\b/i,
-      rust: /\brust\b/i,
-      go: /\bgolang|\bgo\b/i,
-      php: /\bphp\b/i,
-      laravel: /\blaravel\b/i,
-      nextjs: /\bnext\.?js\b/i,
-      nuxt: /\bnuxt\b/i,
-      tailwind: /\btailwind\b/i,
-      css: /\bcss\b/i,
-      html: /\bhtml\b/i,
-      api: /\bapi\b/i,
-      database: /\b(database|sql|postgres|mysql|mongo|redis)\b/i,
-      testing: /\b(test|jest|vitest|cypress|playwright)\b/i,
-      git: /\bgit\b/i,
-      docker: /\bdocker\b/i,
-      aws: /\baws\b/i,
-      cloudflare: /\bcloudflare\b/i,
-      security: /\b(security|auth|authentication)\b/i,
-      performance: /\b(performance|optimization)\b/i,
-    };
+    // Auto-detect keywords from content for tagging
+    // This is a simple heuristic - extracts common technical terms
+    // Users can override/extend via frontmatter tags
+    const extractedKeywords = this.extractKeywordsFromContent(content);
+    extractedKeywords.forEach(kw => tags.add(kw));
 
-    for (const [tag, pattern] of Object.entries(techPatterns)) {
-      if (pattern.test(content)) {
-        tags.add(tag);
+    return Array.from(tags);
+  }
+
+  /**
+   * Extract keywords from content for auto-tagging
+   * Uses a generic approach rather than hardcoded patterns
+   */
+  private extractKeywordsFromContent(content: string): string[] {
+    const keywords = new Set<string>();
+    
+    // Extract words that appear in code fences (language identifiers)
+    const codeFenceMatch = content.matchAll(/```(\w+)/g);
+    for (const match of codeFenceMatch) {
+      if (match[1] && match[1].length > 1) {
+        keywords.add(match[1].toLowerCase());
       }
     }
 
-    return Array.from(tags);
+    // Extract words that appear after common prefixes like "using", "with", "in"
+    const contextPatterns = [
+      /\busing\s+(\w+)/gi,
+      /\bwith\s+(\w+)/gi,
+      /\bin\s+(\w+)\s+(?:project|app|code)/gi,
+      /\bfor\s+(\w+)\s+(?:project|development)/gi,
+    ];
+    
+    for (const pattern of contextPatterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        if (match[1] && match[1].length > 2) {
+          keywords.add(match[1].toLowerCase());
+        }
+      }
+    }
+
+    // Extract hashtag-style tags if present
+    const hashtagMatch = content.matchAll(/#(\w{2,})/g);
+    for (const match of hashtagMatch) {
+      if (match[1]) {
+        keywords.add(match[1].toLowerCase());
+      }
+    }
+
+    // Filter out common words that aren't useful as tags
+    const stopWords = new Set([
+      'the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'will',
+      'your', 'code', 'file', 'files', 'when', 'should', 'must', 'always',
+      'never', 'use', 'using', 'make', 'sure', 'all', 'any', 'are', 'not',
+    ]);
+
+    return Array.from(keywords).filter(kw => !stopWords.has(kw) && kw.length > 2);
   }
 
   /**

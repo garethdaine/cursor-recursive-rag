@@ -8,6 +8,26 @@ import { loadConfig } from '../services/config.js';
 import { createVectorStore } from '../adapters/vector/index.js';
 import { createEmbedder } from '../adapters/embeddings/index.js';
 import { registerTools } from './tools/index.js';
+import { ingestSkillsTool } from './tools/skills.js';
+import { logActivity } from '../services/activity-log.js';
+
+async function autoIngestSkills(config: any): Promise<void> {
+  if (!config.openSkills?.enabled || !config.openSkills?.autoIngestSkills) {
+    return;
+  }
+  
+  try {
+    const result = await ingestSkillsTool(config);
+    if (result.ingested > 0) {
+      logActivity('ingest', `Auto-ingested ${result.ingested} skills`, { 
+        skills: result.skills 
+      });
+    }
+  } catch (error) {
+    // Don't fail startup if auto-ingest fails
+    console.error('Auto-ingest skills failed:', error instanceof Error ? error.message : 'Unknown error');
+  }
+}
 
 async function main() {
   // Load configuration from environment or default path
@@ -31,6 +51,9 @@ async function main() {
   
   const vectorStore = createVectorStore(config.vectorStore, config);
   const embedder = await createEmbedder(config.embeddings, config);
+
+  // Auto-ingest skills if enabled
+  await autoIngestSkills(config);
 
   const server = new Server(
     {

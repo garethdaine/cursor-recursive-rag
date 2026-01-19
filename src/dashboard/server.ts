@@ -138,6 +138,41 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       return;
     }
 
+    if (path === '/api/health' && req.method === 'GET') {
+      const config = loadConfig();
+      const status = {
+        vectorStore: { type: config.vectorStore, status: 'unknown' as string, error: null as string | null, count: 0 },
+        embeddings: { type: config.embeddings, status: 'unknown' as string, error: null as string | null }
+      };
+
+      // Test vector store connection
+      try {
+        const vectorStore = createVectorStore(config.vectorStore, config);
+        const count = await vectorStore.count();
+        status.vectorStore.status = 'connected';
+        status.vectorStore.count = count;
+        if ((vectorStore as any).disconnect) {
+          await (vectorStore as any).disconnect();
+        }
+      } catch (e) {
+        status.vectorStore.status = 'error';
+        status.vectorStore.error = e instanceof Error ? e.message : 'Connection failed';
+      }
+
+      // Test embeddings
+      try {
+        const embedder = await createEmbedder(config.embeddings, config);
+        await embedder.embed('test');
+        status.embeddings.status = 'connected';
+      } catch (e) {
+        status.embeddings.status = 'error';
+        status.embeddings.error = e instanceof Error ? e.message : 'Embeddings failed';
+      }
+
+      res.end(JSON.stringify(status));
+      return;
+    }
+
     if (path === '/api/search' && req.method === 'POST') {
       let body = '';
       req.on('data', chunk => body += chunk);

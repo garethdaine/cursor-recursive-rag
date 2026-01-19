@@ -673,6 +673,272 @@ Add rules optimization UI to dashboard tools.
 
 ---
 
+## Epic: Phase 11 - Comprehensive Test Suite
+
+*Unit, integration, and E2E tests for the entire system*
+
+### CRR-1101: Test Infrastructure Setup
+**Estimate**: 3 points
+**Labels**: testing, infrastructure
+
+Set up testing framework, configuration, and CI integration.
+
+**Files**: `vitest.config.ts`, `package.json`, `tests/setup.ts`
+
+**Acceptance Criteria**:
+- [ ] Vitest configured with TypeScript support
+- [ ] Test scripts in package.json (`test`, `test:unit`, `test:integration`, `test:e2e`, `test:coverage`)
+- [ ] Coverage thresholds configured (minimum 70%)
+- [ ] Test setup file with common mocks and utilities
+- [ ] SQLite in-memory database for test isolation
+- [ ] Mock embeddings adapter for fast tests
+- [ ] GitHub Actions CI workflow for automated testing
+
+---
+
+### CRR-1102: Unit Tests - Core Types & Utilities
+**Estimate**: 2 points
+**Labels**: testing, unit
+**Blocked by**: CRR-1101
+
+Test type guards, enums, and utility functions.
+
+**Files**: `tests/unit/types/*.test.ts`, `tests/unit/utils/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] `memory.ts` types and enums tested
+- [ ] `relationships.ts` helper functions tested (isBidirectional, getReverseType, getRelationshipsByCategory)
+- [ ] `extractedKnowledge.ts` type validation tested
+- [ ] Chunker utility functions tested
+- [ ] Config parsing and validation tested
+
+---
+
+### CRR-1103: Unit Tests - Services (Phase 1-2)
+**Estimate**: 4 points
+**Labels**: testing, unit
+**Blocked by**: CRR-1101
+
+Test foundation and chat history services.
+
+**Files**: `tests/unit/services/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] `MemoryMetadataStore` CRUD operations tested
+- [ ] `MemoryMetadataStore` relationship operations tested
+- [ ] `MemoryMetadataStore` category operations tested
+- [ ] `DecayCalculator` scoring logic tested
+- [ ] `DecayCalculator` edge cases (new chunks, old chunks, high access)
+- [ ] `EnhancedVectorStore` wrapper tested with mock vector store
+- [ ] `CursorChatReader` path detection tested (mock filesystem)
+- [ ] `ConversationProcessor` chunking and entity extraction tested
+
+---
+
+### CRR-1104: Unit Tests - Services (Phase 3-4)
+**Estimate**: 4 points
+**Labels**: testing, unit
+**Blocked by**: CRR-1101
+
+Test knowledge extraction and relationship graph services.
+
+**Files**: `tests/unit/services/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] `KnowledgeExtractor` heuristic extraction tested
+- [ ] `KnowledgeExtractor` LLM extraction tested (mocked LLM)
+- [ ] `KnowledgeExtractor` confidence filtering tested
+- [ ] `KnowledgeStorage` storage operations tested
+- [ ] `KnowledgeStorage` relationship creation tested
+- [ ] `RelationshipGraph` traversal tested (depth limits, type filtering)
+- [ ] `RelationshipGraph` bidirectional relationships tested
+- [ ] `RelationshipGraph` contradiction detection tested
+- [ ] `RelationshipGraph` cluster finding tested
+
+---
+
+### CRR-1105: Unit Tests - Adapters
+**Estimate**: 3 points
+**Labels**: testing, unit
+**Blocked by**: CRR-1101
+
+Test vector store and embedding adapters.
+
+**Files**: `tests/unit/adapters/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] Memory vector store tested (add, search, delete)
+- [ ] Xenova embeddings tested (mocked transformer)
+- [ ] OpenAI embeddings tested (mocked API)
+- [ ] Ollama embeddings tested (mocked API)
+- [ ] Adapter factory functions tested
+- [ ] Error handling for adapter failures tested
+
+---
+
+### CRR-1106: Integration Tests - Vector Store + Metadata
+**Estimate**: 4 points
+**Labels**: testing, integration
+**Blocked by**: CRR-1103, CRR-1105
+
+Test interactions between vector store and metadata store.
+
+**Files**: `tests/integration/vector-metadata.test.ts`
+
+**Acceptance Criteria**:
+- [ ] EnhancedVectorStore upsert stores in both stores
+- [ ] Search results enriched with metadata correctly
+- [ ] Access recording updates decay scores
+- [ ] Re-ranking with decay scores produces different order
+- [ ] Archived chunks filtered from search results
+- [ ] Relationship data included in search results
+
+---
+
+### CRR-1107: Integration Tests - Knowledge Pipeline
+**Estimate**: 4 points
+**Labels**: testing, integration
+**Blocked by**: CRR-1104
+
+Test the full knowledge extraction and storage pipeline.
+
+**Files**: `tests/integration/knowledge-pipeline.test.ts`
+
+**Acceptance Criteria**:
+- [ ] Conversation → extraction → storage flow tested
+- [ ] Solutions stored with correct chunk types
+- [ ] Patterns stored with implementation examples
+- [ ] Decisions stored with reasoning
+- [ ] Relationships created between related knowledge
+- [ ] Duplicate conversations not re-processed
+- [ ] Entity extraction from conversations tested
+
+---
+
+### CRR-1108: Integration Tests - CLI Commands
+**Estimate**: 3 points
+**Labels**: testing, integration
+**Blocked by**: CRR-1103, CRR-1104
+
+Test CLI commands end-to-end.
+
+**Files**: `tests/integration/cli/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] `cursor-rag ingest` command tested
+- [ ] `cursor-rag search` command tested
+- [ ] `cursor-rag status` command tested
+- [ ] `cursor-rag chat list` command tested
+- [ ] `cursor-rag chat ingest` command tested
+- [ ] `cursor-rag chat stats` command tested
+- [ ] Error handling for invalid inputs tested
+- [ ] Help output validated
+
+---
+
+### CRR-1109: Integration Tests - MCP Server & Tools
+**Estimate**: 4 points
+**Labels**: testing, integration
+**Blocked by**: CRR-1106
+
+Test MCP server protocol and tool execution.
+
+**Files**: `tests/integration/mcp/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] MCP server initializes correctly
+- [ ] Tool listing returns all available tools
+- [ ] `search` tool returns relevant results
+- [ ] `ingest` tool processes documents
+- [ ] `crawl` tool handles URLs
+- [ ] `recursive_query` tool performs multi-hop retrieval
+- [ ] `list_sources` tool returns ingested sources
+- [ ] Error responses follow MCP protocol
+
+---
+
+### CRR-1110: E2E Tests - Dashboard UI
+**Estimate**: 5 points
+**Labels**: testing, e2e
+**Blocked by**: CRR-1101
+
+Test dashboard web interface with Playwright.
+
+**Files**: `tests/e2e/dashboard/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] Dashboard loads without errors
+- [ ] Search form submits and displays results
+- [ ] Activity log displays recent operations
+- [ ] Statistics cards show correct data
+- [ ] Sources list displays ingested documents
+- [ ] Navigation between tabs works
+- [ ] Dark/light mode toggle works (if implemented)
+- [ ] Responsive layout on mobile viewport
+- [ ] Error states displayed correctly
+
+---
+
+### CRR-1111: E2E Tests - Full User Flows
+**Estimate**: 5 points
+**Labels**: testing, e2e
+**Blocked by**: CRR-1108, CRR-1109, CRR-1110
+
+Test complete user workflows from ingestion to retrieval.
+
+**Files**: `tests/e2e/flows/*.test.ts`
+
+**Acceptance Criteria**:
+- [ ] Flow: Ingest URL → Search → View results
+- [ ] Flow: Ingest file → Search → Verify content
+- [ ] Flow: Chat ingest → Search past solutions
+- [ ] Flow: MCP search from simulated Cursor request
+- [ ] Flow: Dashboard search → Click result → View details
+- [ ] Performance: Search returns in <500ms for 1000 chunks
+- [ ] Performance: Ingest 100 documents in <30s
+
+---
+
+### CRR-1112: Test Fixtures & Factories
+**Estimate**: 2 points
+**Labels**: testing, infrastructure
+**Blocked by**: CRR-1101
+
+Create reusable test fixtures and data factories.
+
+**Files**: `tests/fixtures/*.ts`, `tests/factories/*.ts`
+
+**Acceptance Criteria**:
+- [ ] Sample conversations fixture (various formats)
+- [ ] Sample documents fixture (markdown, code, mixed)
+- [ ] EnhancedChunk factory with sensible defaults
+- [ ] Conversation factory with customizable messages
+- [ ] Relationship factory for graph tests
+- [ ] Category factory for hierarchy tests
+- [ ] Mock vector store with predictable search results
+- [ ] Mock LLM with configurable responses
+
+---
+
+### CRR-1113: Test Documentation & Coverage Report
+**Estimate**: 1 point
+**Labels**: testing, documentation
+**Blocked by**: CRR-1102 through CRR-1112
+
+Document testing strategy and generate coverage reports.
+
+**Files**: `docs/TESTING.md`, `coverage/`
+
+**Acceptance Criteria**:
+- [ ] TESTING.md with testing strategy overview
+- [ ] Instructions for running different test suites
+- [ ] Coverage report generation configured
+- [ ] Coverage badges in README
+- [ ] Test naming conventions documented
+- [ ] Mock usage guidelines documented
+
+---
+
 ## Summary
 
 | Epic | Tasks | Total Points |
@@ -687,7 +953,8 @@ Add rules optimization UI to dashboard tools.
 | Phase 8: RLM Recursive Retrieval | 4 | 16 |
 | Phase 9: Dashboard Tools UI | 4 | 11 |
 | Phase 10: Rules Optimizer | 7 | 23 |
-| **Total** | **34** | **100** |
+| Phase 11: Test Suite | 13 | 44 |
+| **Total** | **47** | **144** |
 
 ---
 
@@ -760,9 +1027,25 @@ CRR-1001 ──── CRR-1002 ──── CRR-1003 ──── CRR-1004
                                     └──── CRR-1005 ──── CRR-1006
                                                   └──── CRR-1007 (requires CRR-903)
 
+Phase 11: Test Suite (can run in parallel, tests existing features)
+CRR-1101 (Infrastructure) ──┬── CRR-1102 (Types/Utils)
+                            ├── CRR-1103 (Services 1-2) ──┬── CRR-1106 (Integration: Vector+Meta)
+                            ├── CRR-1104 (Services 3-4) ──┴── CRR-1107 (Integration: Knowledge)
+                            ├── CRR-1105 (Adapters) ──────┘
+                            ├── CRR-1108 (Integration: CLI)
+                            ├── CRR-1109 (Integration: MCP)
+                            ├── CRR-1110 (E2E: Dashboard)
+                            └── CRR-1112 (Fixtures)
+                                    │
+CRR-1106 + CRR-1107 + CRR-1108 + CRR-1109 + CRR-1110 ──── CRR-1111 (E2E: Flows)
+                                    │
+All tests (CRR-1102 through CRR-1112) ──── CRR-1113 (Documentation)
+
 Notes:
 - Phase 8 (RLM) depends on CRR-701 (Hybrid Scorer)
 - Phase 9 (Dashboard Tools) is independent, can start anytime
 - Phase 10 (Rules Optimizer) is independent, can start anytime
+- Phase 11 (Test Suite) is independent, can start anytime - tests existing code
 - CRR-1007 depends on CRR-903 (Tools UI Panel) for dashboard integration
+- CRR-1101 (Test Infrastructure) should be done first in Phase 11
 ```

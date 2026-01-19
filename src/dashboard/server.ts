@@ -877,10 +877,13 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
           }
 
           const config = loadRulesConfig();
-          if (!config.analysis.useLLM || !config.llm.provider || !config.llm.apiKey) {
+          const useLLM = config.analysis.useLLM && config.llm.provider && config.llm.apiKey;
+          
+          // If LLM is enabled but not configured, return error
+          if (config.analysis.useLLM && (!config.llm.provider || !config.llm.apiKey)) {
             res.statusCode = 400;
             res.end(JSON.stringify({ 
-              error: 'LLM not configured. Enable "Use LLM for Analysis" and configure a provider first.' 
+              error: 'LLM is enabled but not configured. Either disable "Use LLM for Analysis" in Settings, or configure an LLM provider.' 
             }));
             return;
           }
@@ -888,123 +891,155 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
           const ragConfig = loadConfig();
           const parser = new RulesParser();
           const analyzer = getRulesAnalyzer(ragConfig);
-          const merger = getRulesMerger();
           
           // Step 1: Parse all rules
           const rules = parser.parseDirectory(folder);
           
-          // Step 2: Find duplicates
-          const duplicates = await analyzer.findDuplicates(rules);
-          
-          if (duplicates.length === 0) {
+          if (rules.length === 0) {
             res.end(JSON.stringify({
               success: true,
               dryRun,
-              message: 'No duplicates found - rules are already optimized',
-              stats: { totalRules: rules.length, duplicates: 0, merged: 0, deleted: 0 },
+              message: 'No rules found in the specified folder',
+              stats: { totalRules: 0, duplicates: 0, conflicts: 0, outdated: 0, merged: 0, deleted: 0 },
               actions: [],
             }));
             return;
           }
-
-          // Step 3: Group duplicates into clusters for merging
-          const processed = new Set<string>();
-          const clusters: Array<{ rules: ParsedRule[]; similarity: number }> = [];
           
-          for (const dup of duplicates) {
-            const path1 = dup.rule1.sourceFile.path;
-            const path2 = dup.rule2.sourceFile.path;
-            
-            if (processed.has(path1) && processed.has(path2)) continue;
-            
-            // Find or create cluster
-            let cluster = clusters.find(c => 
-              c.rules.some((r: ParsedRule) => r.sourceFile.path === path1 || r.sourceFile.path === path2)
-            );
-            
-            if (!cluster) {
-              cluster = { rules: [], similarity: dup.similarity };
-              clusters.push(cluster);
-            }
-            
-            if (!cluster.rules.some((r: ParsedRule) => r.sourceFile.path === path1)) {
-              const rule = rules.find((r: ParsedRule) => r.sourceFile.path === path1);
-              if (rule) cluster.rules.push(rule);
-            }
-            if (!cluster.rules.some((r: ParsedRule) => r.sourceFile.path === path2)) {
-              const rule = rules.find((r: ParsedRule) => r.sourceFile.path === path2);
-              if (rule) cluster.rules.push(rule);
-            }
-            
-            processed.add(path1);
-            processed.add(path2);
-          }
-
-          // Step 4: Merge each cluster using LLM
+          // Step 2: Find issues using pattern matching (always works, no LLM needed)
+          const duplicates = await analyzer.findDuplicates(rules);
+          const conflicts = await analyzer.findConflicts(rules);
+          const outdated = analyzer.findOutdatedRules(rules);
+          
           const actions: Array<{
-            type: 'merge' | 'delete' | 'create';
+            type: 'merge' | 'delete' | 'warning' | 'outdated';
             path: string;
             reason: string;
             content?: string;
+            severity?: 'error' | 'warning' | 'info';
           }> = [];
           
           let merged = 0;
           let deleted = 0;
-          
-          for (const cluster of clusters) {
-            if (cluster.rules.length < 2) continue;
-            
-            try {
-              // Use LLM to merge the rules
-              const mergeResult = await merger.mergeRules(cluster.rules, {
-                context: `These rules have ${Math.round(cluster.similarity * 100)}% similarity.`,
-              });
+
+          // Add outdated rule warnings
+          for (const issue of outdated) {
+            actions.push({
+              type: 'outdated',
+              path: issue.rule.sourceFile.path,
+              reason: issue.reason,
+              severity: 'warning',
+            });
+          }
+
+          // Add conflict warnings
+          for (const conflict of conflicts) {
+            actions.push({
+              type: 'warning',
+              path: conflict.rule1.sourceFile.path,
+              reason: `Conflicts with ${conflict.rule2.title}: ${conflict.description}`,
+              severity: 'error',
+            });
+          }
+
+          // Step 3: Handle duplicates
+          if (duplicates.length > 0) {
+            if (useLLM) {
+              // Use LLM to intelligently merge duplicates
+              const merger = getRulesMerger();
               
-              if (mergeResult.success && mergeResult.mergedContent) {
-                // Keep the first rule's path as the merged destination
-                const keepPath = cluster.rules[0].sourceFile.path;
-                const deletePaths = cluster.rules.slice(1).map((r: ParsedRule) => r.sourceFile.path);
+              // Group duplicates into clusters for merging
+              const processed = new Set<string>();
+              const clusters: Array<{ rules: ParsedRule[]; similarity: number }> = [];
+              
+              for (const dup of duplicates) {
+                const path1 = dup.rule1.sourceFile.path;
+                const path2 = dup.rule2.sourceFile.path;
                 
-                actions.push({
-                  type: 'merge',
-                  path: keepPath,
-                  reason: `Merged ${cluster.rules.length} similar rules (${Math.round(cluster.similarity * 100)}% similarity)`,
-                  content: mergeResult.mergedContent,
-                });
+                if (processed.has(path1) && processed.has(path2)) continue;
                 
-                for (const delPath of deletePaths) {
-                  actions.push({
-                    type: 'delete',
-                    path: delPath,
-                    reason: `Content merged into ${keepPath}`,
-                  });
+                let cluster = clusters.find(c => 
+                  c.rules.some((r: ParsedRule) => r.sourceFile.path === path1 || r.sourceFile.path === path2)
+                );
+                
+                if (!cluster) {
+                  cluster = { rules: [], similarity: dup.similarity };
+                  clusters.push(cluster);
                 }
                 
-                merged += cluster.rules.length;
-                deleted += deletePaths.length;
+                if (!cluster.rules.some((r: ParsedRule) => r.sourceFile.path === path1)) {
+                  const rule = rules.find((r: ParsedRule) => r.sourceFile.path === path1);
+                  if (rule) cluster.rules.push(rule);
+                }
+                if (!cluster.rules.some((r: ParsedRule) => r.sourceFile.path === path2)) {
+                  const rule = rules.find((r: ParsedRule) => r.sourceFile.path === path2);
+                  if (rule) cluster.rules.push(rule);
+                }
+                
+                processed.add(path1);
+                processed.add(path2);
               }
-            } catch (mergeError) {
-              // Log but continue with other clusters
-              console.error(`Failed to merge cluster:`, mergeError);
+
+              // Merge each cluster using LLM
+              for (const cluster of clusters) {
+                if (cluster.rules.length < 2) continue;
+                
+                try {
+                  const mergeResult = await merger.mergeRules(cluster.rules, {
+                    context: `These rules have ${Math.round(cluster.similarity * 100)}% similarity.`,
+                  });
+                  
+                  if (mergeResult.success && mergeResult.mergedContent) {
+                    const keepPath = cluster.rules[0].sourceFile.path;
+                    const deletePaths = cluster.rules.slice(1).map((r: ParsedRule) => r.sourceFile.path);
+                    
+                    actions.push({
+                      type: 'merge',
+                      path: keepPath,
+                      reason: `Merged ${cluster.rules.length} similar rules (${Math.round(cluster.similarity * 100)}% similarity)`,
+                      content: mergeResult.mergedContent,
+                    });
+                    
+                    for (const delPath of deletePaths) {
+                      actions.push({
+                        type: 'delete',
+                        path: delPath,
+                        reason: `Content merged into ${keepPath}`,
+                      });
+                    }
+                    
+                    merged += cluster.rules.length;
+                    deleted += deletePaths.length;
+                  }
+                } catch (mergeError) {
+                  console.error(`Failed to merge cluster:`, mergeError);
+                }
+              }
+            } else {
+              // Without LLM: just report duplicates as warnings
+              for (const dup of duplicates) {
+                actions.push({
+                  type: 'warning',
+                  path: dup.rule1.sourceFile.path,
+                  reason: `Duplicate of "${dup.rule2.title}" (${Math.round(dup.similarity * 100)}% similar) - enable LLM to auto-merge`,
+                  severity: 'warning',
+                });
+              }
             }
           }
 
-          // Step 5: Apply changes if not dry run
-          if (!dryRun && actions.length > 0) {
-            // Create backup folder
+          // Step 4: Apply changes if not dry run and LLM was used for merging
+          if (!dryRun && useLLM && actions.some(a => a.type === 'merge' || a.type === 'delete')) {
             const backupFolder = join(folder, '.rules-backup-' + Date.now());
             mkdirSync(backupFolder, { recursive: true });
             
             for (const action of actions) {
               try {
                 if (action.type === 'merge' && action.content) {
-                  // Backup original
                   const filename = action.path.split('/').pop() || 'rule';
                   copyFileSync(action.path, join(backupFolder, filename));
-                  // Write merged content
                   writeFileSync(action.path, action.content, 'utf-8');
                 } else if (action.type === 'delete') {
-                  // Backup before delete
                   const filename = action.path.split('/').pop() || 'rule';
                   copyFileSync(action.path, join(backupFolder, filename));
                   unlinkSync(action.path);
@@ -1015,15 +1050,29 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
             }
           }
 
+          const totalIssues = duplicates.length + conflicts.length + outdated.length;
+          let message: string;
+          
+          if (totalIssues === 0) {
+            message = `Analyzed ${rules.length} rules - no issues found!`;
+          } else if (useLLM && !dryRun) {
+            message = `Applied ${actions.filter(a => a.type === 'merge' || a.type === 'delete').length} optimizations`;
+          } else if (useLLM && dryRun) {
+            message = `Found ${totalIssues} issues (dry run - no changes made)`;
+          } else {
+            message = `Found ${totalIssues} issues. Enable LLM to auto-merge duplicates.`;
+          }
+
           res.end(JSON.stringify({
             success: true,
             dryRun,
-            message: dryRun 
-              ? `Found ${actions.length} optimization actions (dry run - no changes made)`
-              : `Applied ${actions.length} optimization actions`,
+            usedLLM: useLLM,
+            message,
             stats: {
               totalRules: rules.length,
               duplicates: duplicates.length,
+              conflicts: conflicts.length,
+              outdated: outdated.length,
               merged,
               deleted,
             },
@@ -1031,7 +1080,7 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
               type: a.type,
               path: a.path,
               reason: a.reason,
-              // Don't send full content in response to keep it small
+              severity: a.severity,
               hasContent: !!a.content,
             })),
           }));

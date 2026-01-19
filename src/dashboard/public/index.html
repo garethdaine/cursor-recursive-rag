@@ -2457,9 +2457,10 @@
         // Show stats
         statsEl.innerHTML = `
           <span class="text-gray-400">Total: <span class="text-white">${data.stats.totalRules}</span></span>
-          <span class="text-gray-400">Duplicates: <span class="text-yellow-400">${data.stats.duplicates}</span></span>
-          <span class="text-gray-400">Merged: <span class="text-green-400">${data.stats.merged}</span></span>
-          <span class="text-gray-400">Deleted: <span class="text-red-400">${data.stats.deleted}</span></span>
+          <span class="text-gray-400">Duplicates: <span class="${data.stats.duplicates > 0 ? 'text-yellow-400' : 'text-green-400'}">${data.stats.duplicates}</span></span>
+          <span class="text-gray-400">Conflicts: <span class="${data.stats.conflicts > 0 ? 'text-red-400' : 'text-green-400'}">${data.stats.conflicts}</span></span>
+          <span class="text-gray-400">Outdated: <span class="${data.stats.outdated > 0 ? 'text-orange-400' : 'text-green-400'}">${data.stats.outdated}</span></span>
+          ${data.usedLLM ? `<span class="text-gray-400">Merged: <span class="text-green-400">${data.stats.merged}</span></span>` : ''}
         `;
         
         // Show actions
@@ -2468,11 +2469,22 @@
             merge: '🔗',
             delete: '🗑️',
             create: '✨',
+            warning: '⚠️',
+            outdated: '📅',
           };
           const actionColors = {
             merge: 'border-blue-700/50 bg-blue-900/20',
             delete: 'border-red-700/50 bg-red-900/20',
             create: 'border-green-700/50 bg-green-900/20',
+            warning: 'border-yellow-700/50 bg-yellow-900/20',
+            outdated: 'border-orange-700/50 bg-orange-900/20',
+          };
+          const actionTextColors = {
+            merge: 'text-blue-400',
+            delete: 'text-red-400',
+            create: 'text-green-400',
+            warning: 'text-yellow-400',
+            outdated: 'text-orange-400',
           };
           
           actionsEl.innerHTML = data.actions.map(action => `
@@ -2480,8 +2492,11 @@
               <span class="text-lg">${actionIcons[action.type] || '📄'}</span>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-medium uppercase ${action.type === 'delete' ? 'text-red-400' : action.type === 'merge' ? 'text-blue-400' : 'text-green-400'}">${action.type}</span>
-                  ${dryRun ? '<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded">Preview</span>' : '<span class="text-xs bg-green-700/50 text-green-300 px-1.5 py-0.5 rounded">Applied</span>'}
+                  <span class="text-xs font-medium uppercase ${actionTextColors[action.type] || 'text-gray-400'}">${action.type}</span>
+                  ${action.type === 'merge' || action.type === 'delete' 
+                    ? (dryRun ? '<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded">Preview</span>' : '<span class="text-xs bg-green-700/50 text-green-300 px-1.5 py-0.5 rounded">Applied</span>')
+                    : (action.severity ? `<span class="text-xs bg-${action.severity === 'error' ? 'red' : action.severity === 'warning' ? 'yellow' : 'blue'}-700/30 px-1.5 py-0.5 rounded">${action.severity}</span>` : '')
+                  }
                 </div>
                 <p class="text-sm text-gray-300 truncate mt-1" title="${escapeHtml(action.path)}">${escapeHtml(action.path.split('/').pop())}</p>
                 <p class="text-xs text-gray-500 mt-1">${escapeHtml(action.reason)}</p>
@@ -2489,7 +2504,7 @@
             </div>
           `).join('');
         } else {
-          actionsEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">✅ No optimizations needed - your rules are already clean!</p>';
+          actionsEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">✅ No issues found - your rules are clean!</p>';
         }
         
         statusEl.textContent = dryRun ? 'Preview Complete' : 'Complete';

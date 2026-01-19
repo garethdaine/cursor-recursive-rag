@@ -342,6 +342,74 @@
           </div>
         </div>
 
+        <!-- Rules Optimizer Panel -->
+        <div class="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-700/50 rounded-xl p-6 mb-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-semibold flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Rules Optimizer
+                <span class="text-xs bg-purple-600/30 text-purple-400 px-2 py-0.5 rounded">LLM</span>
+              </h3>
+              <p class="text-sm text-gray-400 mt-1">Automatically analyze, detect duplicates, merge, and clean up Cursor rules</p>
+            </div>
+            <div id="optimizer-status" class="text-xs px-2 py-1 rounded-full bg-gray-800 text-gray-400">Ready</div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Rules Folder</label>
+              <input type="text" id="optimizer-folder" value="~/.cursor/rules" 
+                placeholder="e.g., ~/.cursor/rules or /path/to/rules"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Mode</label>
+              <select id="optimizer-mode" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
+                <option value="dry-run">Dry Run (Preview Only)</option>
+                <option value="apply">Apply Changes</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button onclick="runRulesOptimizer()" id="optimizer-run-btn" 
+                class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span>Run Optimizer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Optimizer Results -->
+          <div id="optimizer-results" class="hidden">
+            <div class="border-t border-purple-700/30 pt-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-medium">Results</h4>
+                <div id="optimizer-stats" class="flex gap-4 text-xs"></div>
+              </div>
+              
+              <!-- Progress steps -->
+              <div id="optimizer-progress" class="flex items-center gap-2 mb-4 text-xs">
+                <span class="optimizer-step" data-step="analyze">📋 Analyze</span>
+                <span class="text-gray-600">→</span>
+                <span class="optimizer-step" data-step="duplicates">🔍 Detect Duplicates</span>
+                <span class="text-gray-600">→</span>
+                <span class="optimizer-step" data-step="merge">🔗 Merge</span>
+                <span class="text-gray-600">→</span>
+                <span class="optimizer-step" data-step="cleanup">🗑️ Cleanup</span>
+              </div>
+
+              <!-- Actions list -->
+              <div id="optimizer-actions" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Actions will be populated here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Category Filter -->
         <div class="mb-6">
           <div class="flex flex-wrap gap-2" id="tool-category-filters">
@@ -2183,6 +2251,145 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // ==================== RULES OPTIMIZER ====================
+    let optimizerRunning = false;
+
+    function updateOptimizerStep(step, status) {
+      const steps = document.querySelectorAll('.optimizer-step');
+      steps.forEach(el => {
+        const stepName = el.dataset.step;
+        if (stepName === step) {
+          if (status === 'active') {
+            el.classList.add('text-purple-400', 'font-medium');
+            el.classList.remove('text-gray-500', 'text-green-400');
+          } else if (status === 'done') {
+            el.classList.add('text-green-400');
+            el.classList.remove('text-purple-400', 'text-gray-500');
+          }
+        }
+      });
+    }
+
+    function resetOptimizerSteps() {
+      const steps = document.querySelectorAll('.optimizer-step');
+      steps.forEach(el => {
+        el.classList.remove('text-purple-400', 'text-green-400', 'font-medium');
+        el.classList.add('text-gray-500');
+      });
+    }
+
+    async function runRulesOptimizer() {
+      if (optimizerRunning) return;
+      
+      const folder = document.getElementById('optimizer-folder').value.trim();
+      const mode = document.getElementById('optimizer-mode').value;
+      const dryRun = mode === 'dry-run';
+      
+      if (!folder) {
+        showToast('Please enter a rules folder path', 'warning');
+        return;
+      }
+
+      // Expand ~ to home directory hint
+      const expandedFolder = folder.startsWith('~') 
+        ? folder.replace('~', '/Users/' + (window.navigator.userAgent.includes('Mac') ? '' : ''))
+        : folder;
+      
+      optimizerRunning = true;
+      const runBtn = document.getElementById('optimizer-run-btn');
+      const statusEl = document.getElementById('optimizer-status');
+      const resultsEl = document.getElementById('optimizer-results');
+      const actionsEl = document.getElementById('optimizer-actions');
+      const statsEl = document.getElementById('optimizer-stats');
+      
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Running...</span>';
+      statusEl.textContent = 'Running...';
+      statusEl.className = 'text-xs px-2 py-1 rounded-full bg-purple-600/30 text-purple-400';
+      
+      resultsEl.classList.remove('hidden');
+      actionsEl.innerHTML = '<p class="text-gray-500 text-sm">Analyzing rules...</p>';
+      statsEl.innerHTML = '';
+      resetOptimizerSteps();
+      
+      try {
+        // Step 1: Analyze
+        updateOptimizerStep('analyze', 'active');
+        actionsEl.innerHTML = '<p class="text-gray-400 text-sm">📋 Analyzing rules in folder...</p>';
+        
+        const analyzeRes = await fetch(`${API_BASE}/api/rules/auto-optimize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder, dryRun })
+        });
+        
+        const data = await analyzeRes.json();
+        
+        if (!analyzeRes.ok || data.error) {
+          throw new Error(data.error || 'Optimization failed');
+        }
+        
+        updateOptimizerStep('analyze', 'done');
+        updateOptimizerStep('duplicates', 'done');
+        updateOptimizerStep('merge', 'done');
+        updateOptimizerStep('cleanup', 'done');
+        
+        // Show stats
+        statsEl.innerHTML = `
+          <span class="text-gray-400">Total: <span class="text-white">${data.stats.totalRules}</span></span>
+          <span class="text-gray-400">Duplicates: <span class="text-yellow-400">${data.stats.duplicates}</span></span>
+          <span class="text-gray-400">Merged: <span class="text-green-400">${data.stats.merged}</span></span>
+          <span class="text-gray-400">Deleted: <span class="text-red-400">${data.stats.deleted}</span></span>
+        `;
+        
+        // Show actions
+        if (data.actions && data.actions.length > 0) {
+          const actionIcons = {
+            merge: '🔗',
+            delete: '🗑️',
+            create: '✨',
+          };
+          const actionColors = {
+            merge: 'border-blue-700/50 bg-blue-900/20',
+            delete: 'border-red-700/50 bg-red-900/20',
+            create: 'border-green-700/50 bg-green-900/20',
+          };
+          
+          actionsEl.innerHTML = data.actions.map(action => `
+            <div class="flex items-start gap-3 p-3 rounded-lg border ${actionColors[action.type] || 'border-gray-700 bg-gray-800/50'}">
+              <span class="text-lg">${actionIcons[action.type] || '📄'}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium uppercase ${action.type === 'delete' ? 'text-red-400' : action.type === 'merge' ? 'text-blue-400' : 'text-green-400'}">${action.type}</span>
+                  ${dryRun ? '<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded">Preview</span>' : '<span class="text-xs bg-green-700/50 text-green-300 px-1.5 py-0.5 rounded">Applied</span>'}
+                </div>
+                <p class="text-sm text-gray-300 truncate mt-1" title="${escapeHtml(action.path)}">${escapeHtml(action.path.split('/').pop())}</p>
+                <p class="text-xs text-gray-500 mt-1">${escapeHtml(action.reason)}</p>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          actionsEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">✅ No optimizations needed - your rules are already clean!</p>';
+        }
+        
+        statusEl.textContent = dryRun ? 'Preview Complete' : 'Complete';
+        statusEl.className = 'text-xs px-2 py-1 rounded-full bg-green-600/30 text-green-400';
+        
+        showToast(data.message, 'success');
+        
+      } catch (e) {
+        statusEl.textContent = 'Error';
+        statusEl.className = 'text-xs px-2 py-1 rounded-full bg-red-600/30 text-red-400';
+        actionsEl.innerHTML = `<p class="text-red-400 text-sm">❌ ${escapeHtml(e.message)}</p>`;
+        showToast(e.message, 'error');
+      } finally {
+        optimizerRunning = false;
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg><span>Run Optimizer</span>';
+      }
+    }
     }
 
     async function toggleVersionCheck(index) {

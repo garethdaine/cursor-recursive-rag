@@ -9,6 +9,7 @@ import { searchCommand } from './commands/search.js';
 import { statusCommand } from './commands/status.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { chatCommand } from './commands/chat.js';
+import { maintenanceCommand } from './commands/maintenance.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,5 +37,6 @@ program.addCommand(searchCommand);
 program.addCommand(statusCommand);
 program.addCommand(dashboardCommand);
 program.addCommand(chatCommand);
+program.addCommand(maintenanceCommand);
 
 program.parse();

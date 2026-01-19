@@ -6,3 +6,9 @@ dist/
 .env.local
 *.tsbuildinfo
 .cursor-rag/
+
+# Test artifacts
+test-results/
+playwright-report/
+coverage/
+test-phase*.ts

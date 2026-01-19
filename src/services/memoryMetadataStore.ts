@@ -380,7 +380,7 @@ export class MemoryMetadataStore {
       SELECT DISTINCT 
         CASE WHEN from_chunk_id = ? THEN to_chunk_id ELSE from_chunk_id END as related_id
       FROM relationships 
-      WHERE from_chunk_id = ? OR to_chunk_id = ?
+      WHERE (from_chunk_id = ? OR to_chunk_id = ?)
     `;
     const params: any[] = [chunkId, chunkId, chunkId];
     

@@ -12,6 +12,7 @@
     "copy-static": "mkdir -p dist/dashboard/public && cp -r src/dashboard/public/* dist/dashboard/public/",
     "dev": "tsx watch src/cli/index.ts",
     "start:server": "node dist/server/index.js",
+    "restart": "./restart-rag.sh",
     "prepublishOnly": "npm run build",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",

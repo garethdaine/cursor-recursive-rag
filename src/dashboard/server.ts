@@ -11,6 +11,14 @@ import { createOpenSkillsClient } from '../integrations/openskills.js';
 import { logActivity as sharedLogActivity, getActivityLog } from '../services/activity-log.js';
 import { getToolRegistry, ToolCategory, JobStatus } from './toolRegistry.js';
 import { registerCoreTools } from './coreTools.js';
+import { 
+  loadRulesConfig, 
+  saveRulesConfig, 
+  validatePattern,
+  testPattern,
+  EXAMPLE_PATTERNS,
+  RulesAnalyzerConfigSchema,
+} from '../config/rulesConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -418,6 +426,209 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
           success: j.result?.success,
         })),
       }));
+      return;
+    }
+
+    // =========================================
+    // Rules Analyzer Configuration API
+    // =========================================
+
+    // Get rules config
+    if (path === '/api/rules/config' && req.method === 'GET') {
+      try {
+        const config = loadRulesConfig();
+        res.end(JSON.stringify({
+          config,
+          examples: EXAMPLE_PATTERNS,
+        }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Failed to load config' }));
+      }
+      return;
+    }
+
+    // Save rules config
+    if (path === '/api/rules/config' && req.method === 'PUT') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const data = JSON.parse(body);
+          const validated = RulesAnalyzerConfigSchema.parse(data);
+          saveRulesConfig(validated);
+          logActivity('query', 'Rules analyzer config updated');
+          res.end(JSON.stringify({ success: true, config: validated }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ 
+            error: e instanceof Error ? e.message : 'Invalid config',
+            details: e instanceof Error && 'issues' in e ? (e as any).issues : undefined,
+          }));
+        }
+      });
+      return;
+    }
+
+    // Validate a regex pattern
+    if (path === '/api/rules/validate-pattern' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const { pattern } = JSON.parse(body);
+          const result = validatePattern(pattern);
+          res.end(JSON.stringify(result));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ valid: false, error: 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Test a pattern against sample content
+    if (path === '/api/rules/test-pattern' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const { pattern, content } = JSON.parse(body);
+          const result = testPattern(pattern, content);
+          res.end(JSON.stringify(result));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ matches: false, error: 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Get example patterns (templates)
+    if (path === '/api/rules/examples' && req.method === 'GET') {
+      res.end(JSON.stringify(EXAMPLE_PATTERNS));
+      return;
+    }
+
+    // Add a version check pattern
+    if (path === '/api/rules/config/version-checks' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const newCheck = JSON.parse(body);
+          const config = loadRulesConfig();
+          
+          // Validate the pattern
+          const validation = validatePattern(newCheck.pattern);
+          if (!validation.valid) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: `Invalid pattern: ${validation.error}` }));
+            return;
+          }
+          
+          config.versionChecks.push({
+            ...newCheck,
+            enabled: newCheck.enabled ?? true,
+          });
+          saveRulesConfig(config);
+          
+          res.end(JSON.stringify({ success: true, config }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Add a deprecation pattern
+    if (path === '/api/rules/config/deprecation-patterns' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const newPattern = JSON.parse(body);
+          const config = loadRulesConfig();
+          
+          // Validate the pattern
+          const validation = validatePattern(newPattern.pattern);
+          if (!validation.valid) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: `Invalid pattern: ${validation.error}` }));
+            return;
+          }
+          
+          config.deprecationPatterns.push({
+            ...newPattern,
+            enabled: newPattern.enabled ?? true,
+          });
+          saveRulesConfig(config);
+          
+          res.end(JSON.stringify({ success: true, config }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Delete a version check or deprecation pattern by index
+    const deletePatternMatch = path.match(/^\/api\/rules\/config\/(version-checks|deprecation-patterns)\/(\d+)$/);
+    if (deletePatternMatch && req.method === 'DELETE') {
+      const [, patternType, indexStr] = deletePatternMatch;
+      const index = parseInt(indexStr, 10);
+      
+      try {
+        const config = loadRulesConfig();
+        const array = patternType === 'version-checks' 
+          ? config.versionChecks 
+          : config.deprecationPatterns;
+        
+        if (index < 0 || index >= array.length) {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'Pattern not found' }));
+          return;
+        }
+        
+        array.splice(index, 1);
+        saveRulesConfig(config);
+        
+        res.end(JSON.stringify({ success: true, config }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Failed to delete' }));
+      }
+      return;
+    }
+
+    // Toggle pattern enabled/disabled
+    const togglePatternMatch = path.match(/^\/api\/rules\/config\/(version-checks|deprecation-patterns)\/(\d+)\/toggle$/);
+    if (togglePatternMatch && req.method === 'POST') {
+      const [, patternType, indexStr] = togglePatternMatch;
+      const index = parseInt(indexStr, 10);
+      
+      try {
+        const config = loadRulesConfig();
+        const array = patternType === 'version-checks' 
+          ? config.versionChecks 
+          : config.deprecationPatterns;
+        
+        if (index < 0 || index >= array.length) {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'Pattern not found' }));
+          return;
+        }
+        
+        array[index].enabled = !array[index].enabled;
+        saveRulesConfig(config);
+        
+        res.end(JSON.stringify({ success: true, enabled: array[index].enabled, config }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Failed to toggle' }));
+      }
       return;
     }
 

@@ -23,6 +23,12 @@ import type {
   RulesOptimizerOptions,
 } from '../types/rulesOptimizer.js';
 import { DEFAULT_OPTIMIZER_OPTIONS } from '../types/rulesOptimizer.js';
+import { 
+  loadRulesConfig, 
+  type RulesAnalyzerConfig,
+  type VersionCheck,
+  type DeprecationPattern,
+} from '../config/rulesConfig.js';
 
 /**
  * Cosine similarity between two vectors
@@ -63,15 +69,40 @@ export class RulesAnalyzer {
   private llm: LLMProvider | null;
   private config: RAGConfig;
   private options: Required<RulesOptimizerOptions>;
+  private rulesConfig: RulesAnalyzerConfig;
   private ruleEmbeddings: Map<string, number[]> = new Map();
 
   constructor(
     config: RAGConfig,
-    options?: RulesOptimizerOptions
+    options?: RulesOptimizerOptions,
+    rulesConfig?: RulesAnalyzerConfig
   ) {
     this.config = config;
-    this.llm = options?.useLLM !== false ? getLLMProvider() : null;
-    this.options = { ...DEFAULT_OPTIMIZER_OPTIONS, ...options } as Required<RulesOptimizerOptions>;
+    this.rulesConfig = rulesConfig ?? loadRulesConfig();
+    this.llm = (options?.useLLM !== false && this.rulesConfig.analysis.useLLM) 
+      ? getLLMProvider() 
+      : null;
+    this.options = { 
+      ...DEFAULT_OPTIMIZER_OPTIONS, 
+      ...options,
+      duplicateThreshold: options?.duplicateThreshold ?? this.rulesConfig.analysis.duplicateThreshold,
+      detectConflicts: options?.detectConflicts ?? this.rulesConfig.analysis.detectConflicts,
+      detectOutdated: options?.detectOutdated ?? this.rulesConfig.analysis.detectOutdated,
+    } as Required<RulesOptimizerOptions>;
+  }
+
+  /**
+   * Get the current rules configuration
+   */
+  getConfig(): RulesAnalyzerConfig {
+    return this.rulesConfig;
+  }
+
+  /**
+   * Update rules configuration
+   */
+  setConfig(config: RulesAnalyzerConfig): void {
+    this.rulesConfig = config;
   }
 
   private async getEmbeddings(): Promise<Embedder> {
@@ -306,40 +337,84 @@ export class RulesAnalyzer {
   }
 
   /**
-   * Find potentially outdated rules based on age
+   * Find potentially outdated rules
    * 
-   * Note: We intentionally avoid hardcoding specific technology versions
-   * since they change frequently and vary by user preference. Instead,
-   * we flag rules based on:
-   * - File age (hasn't been modified in a long time)
-   * - Explicit version references that users can customize
+   * Uses configurable patterns from rulesConfig plus some default heuristics:
+   * - File age (configurable maxAgeDays)
+   * - Old year references (configurable oldYearThreshold)
+   * - User-defined version checks
+   * - User-defined deprecation patterns
    */
   findOutdatedRules(rules: ParsedRule[]): OutdatedRule[] {
     const outdated: OutdatedRule[] = [];
+    const { maxAgeDays, oldYearThreshold } = this.rulesConfig.analysis;
+    const versionChecks = this.rulesConfig.versionChecks.filter(v => v.enabled);
+    const deprecationPatterns = this.rulesConfig.deprecationPatterns.filter(d => d.enabled);
 
     for (const rule of rules) {
       const outdatedReferences: OutdatedRule['outdatedReferences'] = [];
       let maxConfidence = 0;
 
-      // Check rule age - flag if not modified in over a year
+      // Check rule age
       const daysSinceModified = (Date.now() - rule.sourceFile.lastModified.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceModified > 365) {
+      if (daysSinceModified > maxAgeDays) {
         outdatedReferences.push({
           reference: `Rule hasn't been updated in ${Math.floor(daysSinceModified)} days`,
         });
         maxConfidence = Math.max(maxConfidence, 0.4);
       }
 
-      // Flag rules that reference very old years explicitly
-      const oldYearMatch = rule.content.match(/\b(201[0-9]|202[0-3])\b/);
-      if (oldYearMatch) {
-        const year = parseInt(oldYearMatch[1]);
-        const currentYear = new Date().getFullYear();
-        if (currentYear - year >= 2) {
+      // Check for old year references
+      const currentYear = new Date().getFullYear();
+      const yearPattern = new RegExp(`\\b(20[0-2][0-9])\\b`, 'g');
+      let yearMatch;
+      while ((yearMatch = yearPattern.exec(rule.content)) !== null) {
+        const year = parseInt(yearMatch[1]);
+        if (currentYear - year >= oldYearThreshold) {
           outdatedReferences.push({
             reference: `References year ${year} - may need review`,
           });
           maxConfidence = Math.max(maxConfidence, 0.3);
+          break; // Only flag once
+        }
+      }
+
+      // Check user-defined version patterns
+      for (const check of versionChecks) {
+        try {
+          const regex = new RegExp(check.pattern, 'gi');
+          const match = regex.exec(rule.content);
+          if (match?.[1]) {
+            const mentionedVersion = parseFloat(match[1]);
+            const currentVersion = parseFloat(check.currentVersion);
+            
+            if (mentionedVersion < currentVersion) {
+              outdatedReferences.push({
+                reference: `${check.name} ${match[1]}`,
+                currentVersion: check.currentVersion,
+                suggestedUpdate: `${check.name} ${check.currentVersion}`,
+              });
+              maxConfidence = Math.max(maxConfidence, 0.8);
+            }
+          }
+        } catch {
+          // Invalid regex pattern, skip
+        }
+      }
+
+      // Check user-defined deprecation patterns
+      for (const pattern of deprecationPatterns) {
+        try {
+          const regex = new RegExp(pattern.pattern, 'gi');
+          if (regex.test(rule.content)) {
+            outdatedReferences.push({
+              reference: pattern.reason,
+              suggestedUpdate: pattern.suggestion,
+            });
+            maxConfidence = Math.max(maxConfidence, 0.6);
+          }
+        } catch {
+          // Invalid regex pattern, skip
         }
       }
 
@@ -357,7 +432,7 @@ export class RulesAnalyzer {
           rule,
           reason: outdatedReferences.map(r => r.reference).join('; '),
           confidence: maxConfidence,
-          action: 'review',
+          action: maxConfidence > 0.7 ? 'update' : 'review',
           outdatedReferences,
         });
       }
@@ -837,10 +912,24 @@ let analyzerInstance: RulesAnalyzer | null = null;
 
 export function getRulesAnalyzer(
   config: RAGConfig,
-  options?: RulesOptimizerOptions
+  options?: RulesOptimizerOptions,
+  rulesConfig?: RulesAnalyzerConfig
 ): RulesAnalyzer {
-  if (!analyzerInstance || options) {
-    analyzerInstance = new RulesAnalyzer(config, options);
+  if (!analyzerInstance || options || rulesConfig) {
+    analyzerInstance = new RulesAnalyzer(config, options, rulesConfig);
   }
   return analyzerInstance;
 }
+
+// Re-export config types and functions
+export { 
+  loadRulesConfig, 
+  saveRulesConfig,
+  validatePattern,
+  testPattern,
+  EXAMPLE_PATTERNS,
+  type RulesAnalyzerConfig,
+  type VersionCheck,
+  type DeprecationPattern,
+  type TagPattern,
+} from '../config/rulesConfig.js';

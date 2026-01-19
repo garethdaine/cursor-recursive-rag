@@ -671,24 +671,29 @@ CLI commands for rules optimization.
 
 ---
 
-### CRR-1005: Implement Rules Merger
+### CRR-1005: Implement Rules Merger ✅
 **Estimate**: 5 points
 **Labels**: rules, llm
 **Blocked by**: CRR-1000, CRR-1003
+**Status**: COMPLETED
 
 Use LLM to intelligently merge and consolidate related rules.
 
 **File**: `src/services/rulesMerger.ts`
 
 **Acceptance Criteria**:
-- [ ] Uses LLMProvider system (CRR-1000) for AI operations
-- [ ] Merge duplicate rules preserving all unique information
-- [ ] Combine related rules into comprehensive single rules
-- [ ] Rewrite verbose rules to be more concise
-- [ ] Preserve critical details while reducing token count
-- [ ] Maintain rule intent and effectiveness
-- [ ] Support dry-run mode with preview
-- [ ] Configurable aggressiveness (conservative/balanced/aggressive)
+- [x] Uses LLMProvider system (CRR-1000) for AI operations
+- [x] Merge duplicate rules preserving all unique information
+- [x] Combine related rules into comprehensive single rules
+- [x] Rewrite verbose rules to be more concise
+- [x] Preserve critical details while reducing token count
+- [x] Maintain rule intent and effectiveness
+- [x] Support dry-run mode with preview
+- [x] Configurable aggressiveness (conservative/balanced/aggressive)
+
+**CLI Commands Added**:
+- `cursor-rag rules merge <folder>` - Merge duplicates using LLM
+- `cursor-rag rules rewrite <folder>` - Rewrite verbose rules to be more concise
 
 ---
 

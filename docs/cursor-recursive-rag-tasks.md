@@ -379,7 +379,7 @@ Define configuration schema and defaults for all memory features.
 
 *Based on the Recursive Language Models paper (Zhang et al., 2024)*
 
-### CRR-801: Implement Context Environment
+### CRR-801: Implement Context Environment ✅
 **Estimate**: 5 points
 **Labels**: rlm, retrieval, core
 
@@ -388,17 +388,17 @@ Create sandboxed environment for RLM-style context processing with cost tracking
 **File**: `src/services/contextEnvironment.ts`
 
 **Acceptance Criteria**:
-- [ ] Context can be loaded as environment variables
-- [ ] State description gives LLM overview without full content
-- [ ] Peek allows selective viewing of chunks
-- [ ] Filter supports regex patterns
-- [ ] Sub-queries track cost and enforce budget
-- [ ] Async batch queries work with concurrency limit
-- [ ] Termination conditions enforced (iterations, cost, sub-calls)
+- [x] Context can be loaded as environment variables (loadContext method)
+- [x] State description gives LLM overview without full content (getStateDescription method)
+- [x] Peek allows selective viewing of chunks (peek method with start/end params)
+- [x] Filter supports regex patterns (filter method with RegExp)
+- [x] Sub-queries track cost and enforce budget (subQuery with CostTracker)
+- [x] Async batch queries work with concurrency limit (batchSubQuery with configurable concurrency)
+- [x] Termination conditions enforced (shouldTerminate checks iterations, cost, sub-calls, timeout)
 
 ---
 
-### CRR-802: Implement Recursive Retrieval Controller
+### CRR-802: Implement Recursive Retrieval Controller ✅
 **Estimate**: 5 points
 **Labels**: rlm, retrieval, core
 **Blocked by**: CRR-801, CRR-701
@@ -408,12 +408,12 @@ Orchestrate iterative retrieval with complexity assessment and action parsing.
 **File**: `src/services/recursiveRetrieval.ts`
 
 **Acceptance Criteria**:
-- [ ] Simple queries use direct retrieval
-- [ ] Complex queries trigger recursive processing
-- [ ] Complexity assessment considers context size and query type
-- [ ] Actions are parsed and executed correctly
-- [ ] Cost tracked across iterations
-- [ ] Early termination on budget/iteration limits
+- [x] Simple queries use direct retrieval (returns direct when complexity === 'simple')
+- [x] Complex queries trigger recursive processing (iterativeProcess method)
+- [x] Complexity assessment considers context size and query type (assessComplexity method)
+- [x] Actions are parsed and executed correctly (parseAction and executeAction methods)
+- [x] Cost tracked across iterations (via ContextEnvironment.getTotalCost)
+- [x] Early termination on budget/iteration limits (handles Budget/Limit/Timeout errors)
 
 ---
 

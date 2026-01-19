@@ -671,7 +671,7 @@ CLI commands for rules optimization.
 
 ---
 
-### CRR-1005: Implement Rules Merger (Future)
+### CRR-1005: Implement Rules Merger
 **Estimate**: 5 points
 **Labels**: rules, llm
 **Blocked by**: CRR-1000, CRR-1003
@@ -692,7 +692,7 @@ Use LLM to intelligently merge and consolidate related rules.
 
 ---
 
-### CRR-1006: Add Rules Optimizer to Dashboard (Future)
+### CRR-1006: Add Rules Optimizer to Dashboard
 **Estimate**: 3 points
 **Labels**: rules, dashboard
 **Blocked by**: CRR-1003, CRR-903

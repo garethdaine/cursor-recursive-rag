@@ -86,7 +86,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       apiKey: config.apiKey,
       organization: config.organization,
       baseURL: config.baseUrl,
-      timeout: config.timeout ?? 60000,
+      timeout: config.timeout ?? 120000, // 2 minutes for large prompts
       maxRetries: 0, // We handle retries ourselves
     });
   }

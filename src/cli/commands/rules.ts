@@ -12,8 +12,9 @@ import { existsSync, mkdirSync, writeFileSync, copyFileSync } from 'fs';
 
 import { getRulesParser, parseRulesDirectory } from '../../services/rulesParser.js';
 import { getRulesAnalyzer } from '../../services/rulesAnalyzer.js';
+import { getRulesMerger } from '../../services/rulesMerger.js';
 import { loadConfig } from '../../services/config.js';
-import type { OptimizationReport, ParsedRule, DuplicateMatch, RuleConflict, OutdatedRule } from '../../types/rulesOptimizer.js';
+import type { OptimizationReport, ParsedRule, DuplicateMatch, RuleConflict, OutdatedRule, MergeCandidate } from '../../types/rulesOptimizer.js';
 
 const rulesCommand = new Command('rules')
   .description('Analyze and optimize Cursor rules and AGENTS.md files');
@@ -284,6 +285,209 @@ rulesCommand
   });
 
 rulesCommand
+  .command('merge <folder>')
+  .description('Merge duplicate rules using LLM')
+  .option('--dry-run', 'Preview merges without applying (default)', true)
+  .option('--apply', 'Apply merges (creates backups)')
+  .option('--backup <dir>', 'Backup directory', '.cursor-rag/rules-backup')
+  .option('--aggressive', 'More aggressive merging')
+  .option('--conservative', 'Conservative merging (preserve more detail)')
+  .option('--threshold <number>', 'Similarity threshold (0-1)', '0.7')
+  .option('--json', 'Output as JSON')
+  .action(async (folder: string, options) => {
+    const folderPath = resolve(folder);
+    
+    if (!existsSync(folderPath)) {
+      console.error(chalk.red(`Folder not found: ${folderPath}`));
+      process.exit(1);
+    }
+
+    const isDryRun = !options.apply;
+    const aggressiveness = options.aggressive ? 'aggressive' : (options.conservative ? 'conservative' : 'balanced');
+    const spinner = ora(isDryRun ? 'Analyzing rules for merging (dry-run)...' : 'Merging rules...').start();
+
+    try {
+      const config = await loadConfig();
+      const rules = parseRulesDirectory(folderPath);
+
+      spinner.text = `Found ${rules.length} rules, finding duplicates...`;
+
+      const analyzer = getRulesAnalyzer(config, {
+        useLLM: false,
+        duplicateThreshold: parseFloat(options.threshold),
+      });
+
+      const report = await analyzer.analyzeRules(rules, folderPath);
+      const duplicates = report.findings.duplicates.filter(d => 
+        d.recommendation === 'merge' || d.matchType === 'semantic' || d.matchType === 'near_exact'
+      );
+
+      if (duplicates.length === 0) {
+        spinner.succeed('No merge candidates found');
+        console.log(chalk.green('\n✓ No rules need merging!\n'));
+        return;
+      }
+
+      spinner.text = `Found ${duplicates.length} merge candidates, generating merges...`;
+
+      const merger = getRulesMerger({
+        aggressiveness,
+        maxTokensPerRule: 2000,
+        dryRun: isDryRun,
+      });
+
+      const mergeCandidates: MergeCandidate[] = [];
+      
+      for (let i = 0; i < duplicates.length; i++) {
+        const dup = duplicates[i];
+        spinner.text = `Merging ${i + 1}/${duplicates.length}: ${dup.rule1.title} + ${dup.rule2.title}`;
+        
+        try {
+          const candidate = await merger.mergeDuplicates(dup);
+          mergeCandidates.push(candidate);
+        } catch (error) {
+          console.warn(chalk.yellow(`\nWarning: Failed to merge ${dup.rule1.title} + ${dup.rule2.title}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      }
+
+      spinner.succeed(`Generated ${mergeCandidates.length} merge candidates`);
+
+      if (options.json) {
+        console.log(JSON.stringify(mergeCandidates, null, 2));
+        return;
+      }
+
+      printMergeCandidates(mergeCandidates, folderPath);
+
+      if (!isDryRun && mergeCandidates.length > 0) {
+        // Create backups
+        const backupDir = resolve(options.backup);
+        const allRules = mergeCandidates.flatMap(c => c.rules);
+        createBackups(allRules, backupDir);
+        
+        console.log(chalk.cyan(`\n📁 Backups created at: ${backupDir}`));
+        console.log(chalk.yellow('\n⚠️  Actual file writing not yet implemented. Review merge candidates above.\n'));
+      }
+
+    } catch (error) {
+      spinner.fail('Merge failed');
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      process.exit(1);
+    }
+  });
+
+rulesCommand
+  .command('rewrite <folder>')
+  .description('Rewrite rules to be more concise using LLM')
+  .option('--min-tokens <number>', 'Only rewrite rules with more than this many tokens', '500')
+  .option('--dry-run', 'Preview rewrites without applying (default)', true)
+  .option('--apply', 'Apply rewrites (creates backups)')
+  .option('--backup <dir>', 'Backup directory', '.cursor-rag/rules-backup')
+  .option('--json', 'Output as JSON')
+  .action(async (folder: string, options) => {
+    const folderPath = resolve(folder);
+    
+    if (!existsSync(folderPath)) {
+      console.error(chalk.red(`Folder not found: ${folderPath}`));
+      process.exit(1);
+    }
+
+    const isDryRun = !options.apply;
+    const minTokens = parseInt(options.minTokens, 10);
+    const spinner = ora('Finding rules to rewrite...').start();
+
+    try {
+      const rules = parseRulesDirectory(folderPath);
+      const largeRules = rules.filter(r => r.tokenCount >= minTokens);
+
+      if (largeRules.length === 0) {
+        spinner.succeed('No rules need rewriting');
+        console.log(chalk.green(`\n✓ No rules with ${minTokens}+ tokens found!\n`));
+        return;
+      }
+
+      spinner.text = `Found ${largeRules.length} rules with ${minTokens}+ tokens, rewriting...`;
+
+      const merger = getRulesMerger({
+        aggressiveness: 'balanced',
+        maxTokensPerRule: 2000,
+        dryRun: isDryRun,
+      });
+
+      const rewrites: Array<{
+        rule: ParsedRule;
+        newContent: string;
+        newTitle: string;
+        tokensBefore: number;
+        tokensAfter: number;
+        rationale: string;
+      }> = [];
+
+      for (let i = 0; i < largeRules.length; i++) {
+        const rule = largeRules[i];
+        spinner.text = `Rewriting ${i + 1}/${largeRules.length}: ${rule.title}`;
+        
+        try {
+          const result = await merger.rewriteRule(rule);
+          if (result.success && result.tokensAfter < result.tokensBefore * 0.9) {
+            rewrites.push({
+              rule,
+              newContent: result.mergedContent,
+              newTitle: result.mergedTitle,
+              tokensBefore: result.tokensBefore,
+              tokensAfter: result.tokensAfter,
+              rationale: result.rationale,
+            });
+          }
+        } catch (error) {
+          console.warn(chalk.yellow(`\nWarning: Failed to rewrite ${rule.title}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      }
+
+      spinner.succeed(`Generated ${rewrites.length} rewrites`);
+
+      if (options.json) {
+        console.log(JSON.stringify(rewrites, null, 2));
+        return;
+      }
+
+      if (rewrites.length === 0) {
+        console.log(chalk.green('\n✓ No rules could be significantly improved!\n'));
+        return;
+      }
+
+      console.log(chalk.cyan('\n✏️  Rule Rewrites\n'));
+      
+      let totalSaved = 0;
+      for (const rewrite of rewrites) {
+        const saved = rewrite.tokensBefore - rewrite.tokensAfter;
+        const percent = Math.round((saved / rewrite.tokensBefore) * 100);
+        totalSaved += saved;
+        
+        console.log(chalk.bold(`${rewrite.rule.title}`));
+        console.log(`  File: ${chalk.gray(relative(folderPath, rewrite.rule.sourceFile.path))}`);
+        console.log(`  Tokens: ${rewrite.tokensBefore} → ${rewrite.tokensAfter} (${chalk.green(`-${percent}%`)})`);
+        console.log(`  Rationale: ${chalk.gray(rewrite.rationale)}`);
+        console.log('');
+      }
+
+      console.log(chalk.bold(`Total savings: ${chalk.green(totalSaved.toLocaleString())} tokens`));
+
+      if (!isDryRun && rewrites.length > 0) {
+        const backupDir = resolve(options.backup);
+        createBackups(rewrites.map(r => r.rule), backupDir);
+        console.log(chalk.cyan(`\n📁 Backups created at: ${backupDir}`));
+        console.log(chalk.yellow('\n⚠️  Actual file writing not yet implemented. Review rewrites above.\n'));
+      }
+
+    } catch (error) {
+      spinner.fail('Rewrite failed');
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      process.exit(1);
+    }
+  });
+
+rulesCommand
   .command('list <folder>')
   .description('List all rules in a folder')
   .option('--json', 'Output as JSON')
@@ -471,6 +675,47 @@ function printOutdated(outdated: OutdatedRule[], folderPath: string): void {
     }
     console.log('');
   }
+}
+
+function printMergeCandidates(candidates: MergeCandidate[], folderPath: string): void {
+  console.log(chalk.cyan('\n🔀 Merge Candidates\n'));
+
+  let totalTokensBefore = 0;
+  let totalTokensAfter = 0;
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i]!;
+    const saved = candidate.tokensBefore - candidate.tokensAfter;
+    const percent = Math.round((saved / candidate.tokensBefore) * 100);
+    
+    totalTokensBefore += candidate.tokensBefore;
+    totalTokensAfter += candidate.tokensAfter;
+    
+    console.log(chalk.bold(`${i + 1}. ${candidate.mergedTitle}`));
+    console.log(`   Merging ${candidate.rules.length} rules:`);
+    for (const rule of candidate.rules) {
+      console.log(`     - ${rule.title} (${rule.tokenCount} tokens)`);
+    }
+    console.log(`   Tokens: ${candidate.tokensBefore} → ${candidate.tokensAfter} (${chalk.green(`-${percent}%`)})`);
+    console.log(`   Confidence: ${Math.round(candidate.confidence * 100)}%`);
+    console.log(`   Rationale: ${chalk.gray(candidate.mergeRationale)}`);
+    
+    // Show preview of merged content (first 200 chars)
+    const preview = candidate.mergedContent.substring(0, 200).replace(/\n/g, ' ');
+    console.log(`   Preview: ${chalk.gray(preview)}...`);
+    console.log('');
+  }
+
+  const totalSaved = totalTokensBefore - totalTokensAfter;
+  const totalPercent = Math.round((totalSaved / totalTokensBefore) * 100);
+  
+  console.log(chalk.bold('Summary:'));
+  console.log(`  Total candidates: ${candidates.length}`);
+  console.log(`  Tokens before: ${totalTokensBefore.toLocaleString()}`);
+  console.log(`  Tokens after: ${totalTokensAfter.toLocaleString()}`);
+  console.log(`  Total savings: ${chalk.green(`${totalSaved.toLocaleString()} tokens (${totalPercent}%)`)}`);
+  console.log('');
+  console.log(chalk.gray('Run with --apply to execute merges (backups will be created).\n'));
 }
 
 function printOptimizationPlan(report: OptimizationReport, folderPath: string): void {

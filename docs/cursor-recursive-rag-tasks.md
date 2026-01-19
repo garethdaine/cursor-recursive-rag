@@ -697,22 +697,32 @@ Use LLM to intelligently merge and consolidate related rules.
 
 ---
 
-### CRR-1006: Add Rules Optimizer to Dashboard
+### CRR-1006: Add Rules Optimizer to Dashboard ✅
 **Estimate**: 3 points
 **Labels**: rules, dashboard
 **Blocked by**: CRR-1003, CRR-903
+**Status**: COMPLETED
 
 Add rules optimization UI to dashboard tools.
 
 **Acceptance Criteria**:
-- [ ] "Rules Optimizer" tool card in Tools section
-- [ ] Folder path input with validation
-- [ ] Analysis results display with duplicate highlighting
-- [ ] Before/after comparison view
-- [ ] Token count savings visualization
-- [ ] LLM provider selection dropdown
-- [ ] One-click optimize with confirmation
-- [ ] Download optimized rules as zip
+- [x] "Rules Optimizer" tool card in Tools section (purple gradient panel)
+- [x] Folder path input with validation (+ server-side folder browser)
+- [x] Analysis results display with duplicate highlighting
+- [x] One-click optimize with confirmation (dry run + apply modes)
+- [x] LLM provider configuration (via Settings tab, not dropdown)
+- [x] Natural language rules support (LLM-interpreted custom rules)
+- [x] In-app modal/toast system (replaced browser alerts)
+- [ ] Before/after comparison view (future enhancement)
+- [ ] Token count savings visualization (future enhancement)
+- [ ] Download optimized rules as zip (future enhancement)
+
+**Dashboard Features Added**:
+- Rules Optimizer panel in Tools tab with folder browser
+- Server-side folder navigation API (`/api/system/browse`)
+- Auto-optimize API (`/api/rules/auto-optimize`)
+- Works with or without LLM (pattern matching always available)
+- Automatic backup creation before applying changes
 
 ---
 

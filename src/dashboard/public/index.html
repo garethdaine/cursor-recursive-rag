@@ -562,9 +562,63 @@
                   <label for="rules-detect-outdated" class="text-sm text-gray-300">Detect Outdated</label>
                 </div>
                 <div class="flex items-center gap-2">
-                  <input type="checkbox" id="rules-use-llm" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                  <input type="checkbox" id="rules-use-llm" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500" onchange="toggleLLMSettings()">
                   <label for="rules-use-llm" class="text-sm text-gray-300">Use LLM for Analysis</label>
                 </div>
+              </div>
+            </div>
+
+            <!-- LLM Provider Settings -->
+            <div id="llm-settings-section" class="mb-6 hidden">
+              <h4 class="text-sm font-medium text-gray-300 mb-3">LLM Provider Configuration</h4>
+              <div id="llm-status" class="mb-3 hidden">
+                <div class="flex items-center gap-2 text-sm">
+                  <span id="llm-status-icon" class="w-2 h-2 rounded-full bg-gray-500"></span>
+                  <span id="llm-status-text" class="text-gray-400">Not configured</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Provider</label>
+                  <select id="llm-provider" onchange="onProviderChange()" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                    <option value="">Select a provider...</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="groq">Groq</option>
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="openrouter">OpenRouter</option>
+                  </select>
+                </div>
+                <div id="llm-api-key-container">
+                  <label class="block text-sm text-gray-400 mb-2">API Key</label>
+                  <div class="flex gap-2">
+                    <input type="password" id="llm-api-key" placeholder="Enter API key..." class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                    <button onclick="testLLMConnection()" id="llm-test-btn" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">
+                      Test
+                    </button>
+                  </div>
+                  <p id="llm-key-hint" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+                <div id="llm-base-url-container" class="hidden">
+                  <label class="block text-sm text-gray-400 mb-2">Base URL (Optional)</label>
+                  <input type="text" id="llm-base-url" placeholder="http://localhost:11434" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <p class="text-xs text-gray-500 mt-1">Override the default endpoint</p>
+                </div>
+                <div id="llm-model-container" class="hidden">
+                  <label class="block text-sm text-gray-400 mb-2">Model</label>
+                  <select id="llm-model" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                    <option value="">Test connection to load models...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex justify-end mt-4">
+                <button onclick="saveLLMConfig()" id="llm-save-btn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Save LLM Configuration
+                </button>
               </div>
             </div>
 
@@ -1643,6 +1697,18 @@
     // ==================== RULES ANALYZER CONFIGURATION ====================
     let rulesConfig = null;
     let rulesExamples = null;
+    let llmProviders = null;
+    let llmModels = [];
+    let llmConfigured = false;
+
+    const PROVIDER_KEY_HINTS = {
+      openai: 'Starts with sk-...',
+      anthropic: 'Starts with sk-ant-...',
+      deepseek: 'Starts with sk-...',
+      groq: 'Starts with gsk_...',
+      openrouter: 'Starts with sk-or-...',
+      ollama: 'No API key required',
+    };
 
     async function loadRulesConfig() {
       try {
@@ -1662,8 +1728,189 @@
         renderVersionChecks();
         renderDeprecationPatterns();
         renderTemplates();
+        
+        // Load LLM config
+        await loadLLMConfig();
       } catch (e) {
         console.error('Failed to load rules config:', e);
+      }
+    }
+
+    async function loadLLMConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/llm/config`);
+        const llmConfig = await res.json();
+        
+        if (llmConfig.provider) {
+          document.getElementById('llm-provider').value = llmConfig.provider;
+          onProviderChange();
+          
+          if (llmConfig.hasApiKey) {
+            document.getElementById('llm-api-key').placeholder = '***configured*** (enter new key to change)';
+            llmConfigured = true;
+            updateLLMStatus(true, `${llmConfig.provider} configured${llmConfig.model ? ` (${llmConfig.model})` : ''}`);
+          }
+          
+          if (llmConfig.baseUrl) {
+            document.getElementById('llm-base-url').value = llmConfig.baseUrl;
+          }
+          
+          if (llmConfig.model) {
+            // Add the saved model as an option
+            const modelSelect = document.getElementById('llm-model');
+            modelSelect.innerHTML = `<option value="${llmConfig.model}">${llmConfig.model}</option>`;
+            modelSelect.value = llmConfig.model;
+            document.getElementById('llm-model-container').classList.remove('hidden');
+          }
+        }
+        
+        // Show/hide LLM section based on checkbox
+        toggleLLMSettings();
+      } catch (e) {
+        console.error('Failed to load LLM config:', e);
+      }
+    }
+
+    function toggleLLMSettings() {
+      const checkbox = document.getElementById('rules-use-llm');
+      const section = document.getElementById('llm-settings-section');
+      
+      if (checkbox.checked) {
+        section.classList.remove('hidden');
+        if (!llmConfigured) {
+          updateLLMStatus(false, 'Please configure an LLM provider below');
+        }
+      } else {
+        section.classList.add('hidden');
+      }
+    }
+
+    function onProviderChange() {
+      const provider = document.getElementById('llm-provider').value;
+      const apiKeyContainer = document.getElementById('llm-api-key-container');
+      const baseUrlContainer = document.getElementById('llm-base-url-container');
+      const modelContainer = document.getElementById('llm-model-container');
+      const keyHint = document.getElementById('llm-key-hint');
+      
+      // Reset models
+      document.getElementById('llm-model').innerHTML = '<option value="">Test connection to load models...</option>';
+      modelContainer.classList.add('hidden');
+      document.getElementById('llm-save-btn').disabled = true;
+      
+      if (!provider) {
+        apiKeyContainer.classList.add('hidden');
+        baseUrlContainer.classList.add('hidden');
+        return;
+      }
+      
+      // Show/hide API key based on provider
+      if (provider === 'ollama') {
+        apiKeyContainer.classList.add('hidden');
+        baseUrlContainer.classList.remove('hidden');
+        document.getElementById('llm-base-url').placeholder = 'http://localhost:11434';
+      } else {
+        apiKeyContainer.classList.remove('hidden');
+        baseUrlContainer.classList.add('hidden');
+        keyHint.textContent = PROVIDER_KEY_HINTS[provider] || '';
+      }
+    }
+
+    function updateLLMStatus(success, message) {
+      const statusDiv = document.getElementById('llm-status');
+      const icon = document.getElementById('llm-status-icon');
+      const text = document.getElementById('llm-status-text');
+      
+      statusDiv.classList.remove('hidden');
+      icon.className = `w-2 h-2 rounded-full ${success ? 'bg-green-500' : 'bg-yellow-500'}`;
+      text.textContent = message;
+    }
+
+    async function testLLMConnection() {
+      const provider = document.getElementById('llm-provider').value;
+      const apiKey = document.getElementById('llm-api-key').value;
+      const baseUrl = document.getElementById('llm-base-url').value;
+      
+      if (!provider) {
+        alert('Please select a provider first');
+        return;
+      }
+      
+      if (provider !== 'ollama' && !apiKey) {
+        alert('Please enter an API key');
+        return;
+      }
+      
+      const testBtn = document.getElementById('llm-test-btn');
+      testBtn.disabled = true;
+      testBtn.textContent = 'Testing...';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/llm/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, apiKey, baseUrl: baseUrl || undefined })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          llmModels = data.models;
+          const modelSelect = document.getElementById('llm-model');
+          modelSelect.innerHTML = data.models.map(m => 
+            `<option value="${m.id}">${m.name} (${m.contextLength?.toLocaleString() || '?'} ctx)</option>`
+          ).join('');
+          
+          document.getElementById('llm-model-container').classList.remove('hidden');
+          document.getElementById('llm-save-btn').disabled = false;
+          updateLLMStatus(true, `Connected! ${data.models.length} models available`);
+        } else {
+          updateLLMStatus(false, data.error || 'Connection failed');
+          document.getElementById('llm-save-btn').disabled = true;
+        }
+      } catch (e) {
+        updateLLMStatus(false, 'Connection error: ' + e.message);
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = 'Test';
+      }
+    }
+
+    async function saveLLMConfig() {
+      const provider = document.getElementById('llm-provider').value;
+      const apiKey = document.getElementById('llm-api-key').value;
+      const baseUrl = document.getElementById('llm-base-url').value;
+      const model = document.getElementById('llm-model').value;
+      
+      if (!provider) {
+        alert('Please select a provider');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/llm/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            provider, 
+            apiKey: apiKey || undefined, 
+            model: model || undefined,
+            baseUrl: baseUrl || undefined 
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          llmConfigured = true;
+          updateLLMStatus(true, `${provider} configured${model ? ` (${model})` : ''}`);
+          document.getElementById('llm-api-key').placeholder = '***configured*** (enter new key to change)';
+          document.getElementById('llm-api-key').value = '';
+          alert('LLM configuration saved!');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Failed to save: ' + e.message);
       }
     }
 

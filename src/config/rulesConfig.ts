@@ -62,6 +62,36 @@ export const TagPatternSchema = z.object({
 export type TagPattern = z.infer<typeof TagPatternSchema>;
 
 /**
+ * LLM Provider type
+ */
+export const LLMProviderTypeSchema = z.enum([
+  'openai',
+  'anthropic', 
+  'deepseek',
+  'groq',
+  'ollama',
+  'openrouter',
+]);
+
+export type LLMProviderType = z.infer<typeof LLMProviderTypeSchema>;
+
+/**
+ * LLM configuration for rules analyzer
+ */
+export const LLMConfigSchema = z.object({
+  /** Selected provider */
+  provider: LLMProviderTypeSchema.optional(),
+  /** API key (stored securely) */
+  apiKey: z.string().optional(),
+  /** Selected model */
+  model: z.string().optional(),
+  /** Base URL override (for Ollama or custom endpoints) */
+  baseUrl: z.string().optional(),
+}).default({});
+
+export type LLMConfig = z.infer<typeof LLMConfigSchema>;
+
+/**
  * Full rules analyzer configuration
  */
 export const RulesAnalyzerConfigSchema = z.object({
@@ -80,6 +110,9 @@ export const RulesAnalyzerConfigSchema = z.object({
     /** Whether to use LLM for enhanced analysis */
     useLLM: z.boolean().default(false),
   }).default({}),
+
+  /** LLM provider configuration */
+  llm: LLMConfigSchema.default({}),
 
   /** Custom version checks */
   versionChecks: z.array(VersionCheckSchema).default([]),
@@ -125,6 +158,7 @@ export const DEFAULT_RULES_CONFIG: RulesAnalyzerConfig = {
     detectOutdated: true,
     useLLM: false,
   },
+  llm: {},
   versionChecks: [],
   deprecationPatterns: [],
   tagPatterns: [],
@@ -139,6 +173,18 @@ export const DEFAULT_RULES_CONFIG: RulesAnalyzerConfig = {
     backupDir: '.cursor-rag/rules-backup',
   },
 };
+
+/**
+ * Available LLM providers with their requirements
+ */
+export const LLM_PROVIDERS = [
+  { id: 'openai', name: 'OpenAI', requiresKey: true, placeholder: 'sk-...' },
+  { id: 'anthropic', name: 'Anthropic', requiresKey: true, placeholder: 'sk-ant-...' },
+  { id: 'deepseek', name: 'DeepSeek', requiresKey: true, placeholder: 'sk-...' },
+  { id: 'groq', name: 'Groq', requiresKey: true, placeholder: 'gsk_...' },
+  { id: 'ollama', name: 'Ollama (Local)', requiresKey: false, placeholder: '' },
+  { id: 'openrouter', name: 'OpenRouter', requiresKey: true, placeholder: 'sk-or-...' },
+] as const;
 
 /**
  * Example configuration with common patterns (shown in dashboard as templates)

@@ -18,7 +18,10 @@ import {
   testPattern,
   EXAMPLE_PATTERNS,
   RulesAnalyzerConfigSchema,
+  LLM_PROVIDERS,
 } from '../config/rulesConfig.js';
+import { createProvider } from '../adapters/llm/index.js';
+import type { LLMProviderConfig } from '../types/llmProvider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -507,6 +510,130 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
     // Get example patterns (templates)
     if (path === '/api/rules/examples' && req.method === 'GET') {
       res.end(JSON.stringify(EXAMPLE_PATTERNS));
+      return;
+    }
+
+    // Get available LLM providers
+    if (path === '/api/rules/llm/providers' && req.method === 'GET') {
+      res.end(JSON.stringify({ providers: LLM_PROVIDERS }));
+      return;
+    }
+
+    // Test LLM connection and get available models
+    if (path === '/api/rules/llm/test' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { provider, apiKey, baseUrl } = JSON.parse(body);
+          
+          if (!provider) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: 'Provider is required' }));
+            return;
+          }
+
+          // Build provider config
+          const config: LLMProviderConfig = {
+            provider,
+            apiKey,
+            baseUrl,
+          } as LLMProviderConfig;
+
+          try {
+            const llmProvider = createProvider(config);
+            const isAvailable = await llmProvider.isAvailable();
+            
+            if (!isAvailable) {
+              res.end(JSON.stringify({ 
+                success: false, 
+                error: provider === 'ollama' 
+                  ? 'Ollama is not running. Start it with: ollama serve'
+                  : 'Invalid API key or provider not available'
+              }));
+              return;
+            }
+
+            // Get available models
+            const models = await llmProvider.listModels();
+            
+            res.end(JSON.stringify({ 
+              success: true, 
+              models: models.map(m => ({
+                id: m.id,
+                name: m.name,
+                contextLength: m.capabilities.contextLength,
+                supportsJsonMode: m.capabilities.supportsJsonMode,
+              }))
+            }));
+          } catch (providerError) {
+            res.end(JSON.stringify({ 
+              success: false, 
+              error: providerError instanceof Error ? providerError.message : 'Connection failed'
+            }));
+          }
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ success: false, error: 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Save LLM configuration
+    if (path === '/api/rules/llm/config' && req.method === 'PUT') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const { provider, apiKey, model, baseUrl } = JSON.parse(body);
+          const config = loadRulesConfig();
+          
+          config.llm = {
+            provider: provider || undefined,
+            apiKey: apiKey || undefined,
+            model: model || undefined,
+            baseUrl: baseUrl || undefined,
+          };
+          
+          // If LLM is configured, enable useLLM
+          if (provider && (apiKey || provider === 'ollama')) {
+            config.analysis.useLLM = true;
+          }
+          
+          saveRulesConfig(config);
+          logActivity('query', `LLM provider configured: ${provider}`);
+          
+          // Return config without the API key for security
+          const safeConfig = { ...config };
+          if (safeConfig.llm.apiKey) {
+            safeConfig.llm.apiKey = '***configured***';
+          }
+          
+          res.end(JSON.stringify({ success: true, config: safeConfig }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Get LLM configuration (without exposing API key)
+    if (path === '/api/rules/llm/config' && req.method === 'GET') {
+      try {
+        const config = loadRulesConfig();
+        const safeConfig = {
+          provider: config.llm?.provider,
+          model: config.llm?.model,
+          baseUrl: config.llm?.baseUrl,
+          hasApiKey: !!config.llm?.apiKey,
+        };
+        res.end(JSON.stringify(safeConfig));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Failed to load config' }));
+      }
       return;
     }
 

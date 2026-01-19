@@ -9,6 +9,8 @@ import { createVectorStore } from '../adapters/vector/index.js';
 import { createEmbedder } from '../adapters/embeddings/index.js';
 import { createOpenSkillsClient } from '../integrations/openskills.js';
 import { logActivity as sharedLogActivity, getActivityLog } from '../services/activity-log.js';
+import { getToolRegistry, ToolCategory, JobStatus } from './toolRegistry.js';
+import { registerCoreTools } from './coreTools.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -276,6 +278,149 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
       return;
     }
 
+    // Tools API endpoints
+    if (path === '/api/tools' && req.method === 'GET') {
+      const registry = getToolRegistry();
+      const tools = registry.getTools();
+      const categoriesWithCounts = registry.getCategoriesWithCounts();
+      
+      res.end(JSON.stringify({
+        tools: tools.map(t => ({
+          ...t,
+          schema: registry.getParameterSchema(t.name),
+        })),
+        categories: Object.entries(categoriesWithCounts).map(([name, count]) => ({
+          name,
+          count,
+        })),
+        totalTools: tools.length,
+      }));
+      return;
+    }
+
+    // Get tools by category
+    const toolsByCategoryMatch = path.match(/^\/api\/tools\/category\/([^/]+)$/);
+    if (toolsByCategoryMatch && req.method === 'GET') {
+      const category = toolsByCategoryMatch[1] as ToolCategory;
+      const registry = getToolRegistry();
+      const tools = registry.getToolsByCategory(category);
+      
+      res.end(JSON.stringify({
+        category,
+        tools: tools.map(t => ({
+          ...t,
+          schema: registry.getParameterSchema(t.name),
+        })),
+      }));
+      return;
+    }
+
+    // Get single tool with schema
+    const toolDetailMatch = path.match(/^\/api\/tools\/([^/]+)$/);
+    if (toolDetailMatch && req.method === 'GET') {
+      const toolName = toolDetailMatch[1];
+      const registry = getToolRegistry();
+      const tool = registry.getTool(toolName);
+      
+      if (!tool) {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: `Tool '${toolName}' not found` }));
+        return;
+      }
+      
+      res.end(JSON.stringify({
+        ...tool,
+        schema: registry.getParameterSchema(toolName),
+      }));
+      return;
+    }
+
+    // Execute tool
+    const toolExecuteMatch = path.match(/^\/api\/tools\/([^/]+)\/execute$/);
+    if (toolExecuteMatch && req.method === 'POST') {
+      const toolName = toolExecuteMatch[1];
+      const registry = getToolRegistry();
+      
+      if (!registry.hasTool(toolName)) {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: `Tool '${toolName}' not found` }));
+        return;
+      }
+      
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const params = body ? JSON.parse(body) : {};
+          const tool = registry.getTool(toolName);
+          
+          // For long-running tools, execute async and return job ID
+          if (tool?.isLongRunning) {
+            const jobId = registry.executeAsync(toolName, params);
+            res.end(JSON.stringify({
+              async: true,
+              jobId,
+              message: `Tool '${toolName}' started. Check status at /api/tools/${toolName}/status/${jobId}`,
+            }));
+            return;
+          }
+          
+          // Execute synchronously
+          const result = await registry.execute(toolName, params);
+          logActivity('query', `Tool executed: ${toolName}`, { params, success: result.success });
+          res.end(JSON.stringify(result));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Invalid request' }));
+        }
+      });
+      return;
+    }
+
+    // Get job status
+    const jobStatusMatch = path.match(/^\/api\/tools\/([^/]+)\/status\/([^/]+)$/);
+    if (jobStatusMatch && req.method === 'GET') {
+      const [, toolName, jobId] = jobStatusMatch;
+      const registry = getToolRegistry();
+      const job = registry.getJob(jobId);
+      
+      if (!job) {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: `Job '${jobId}' not found` }));
+        return;
+      }
+      
+      res.end(JSON.stringify({
+        id: job.id,
+        toolName: job.toolName,
+        status: job.status,
+        progress: job.progress,
+        progressMessage: job.progressMessage,
+        startedAt: job.startedAt.toISOString(),
+        completedAt: job.completedAt?.toISOString(),
+        result: job.status === JobStatus.COMPLETED || job.status === JobStatus.FAILED ? job.result : undefined,
+      }));
+      return;
+    }
+
+    // Get recent jobs
+    if (path === '/api/tools/jobs' && req.method === 'GET') {
+      const registry = getToolRegistry();
+      const jobs = registry.getRecentJobs(20);
+      
+      res.end(JSON.stringify({
+        jobs: jobs.map(j => ({
+          id: j.id,
+          toolName: j.toolName,
+          status: j.status,
+          startedAt: j.startedAt.toISOString(),
+          completedAt: j.completedAt?.toISOString(),
+          success: j.result?.success,
+        })),
+      }));
+      return;
+    }
+
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));
   } catch (error) {
@@ -443,6 +588,9 @@ function serveStatic(res: ServerResponse, filePath: string): void {
 }
 
 export function startDashboard(port: number = 3333): void {
+  // Register core tools when dashboard starts
+  registerCoreTools();
+  
   const server = createServer(async (req, res) => {
     const url = new URL(req.url || '/', `http://localhost:${port}`);
     const path = url.pathname;

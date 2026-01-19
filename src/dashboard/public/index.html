@@ -78,6 +78,12 @@
           </svg>
           OpenSkills
         </a>
+        <a href="#" onclick="showTab('tools')" id="nav-tools" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Tools
+        </a>
         <a href="#" onclick="showTab('activity')" id="nav-activity" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -306,6 +312,100 @@
         </div>
       </div>
 
+      <!-- Tools Tab -->
+      <div id="tab-tools" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold">Tools</h2>
+          <div class="flex items-center gap-4">
+            <span id="tools-count" class="text-sm text-gray-400">0 tools available</span>
+            <button onclick="loadTools()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-2" id="tool-category-filters">
+            <button onclick="filterToolCategory('')" class="tool-category-filter px-3 py-1 bg-primary-600 rounded-full text-sm transition-colors" data-category="">
+              All
+            </button>
+          </div>
+        </div>
+
+        <!-- Tools Grid -->
+        <div id="tools-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <p class="text-gray-500 text-center py-8 col-span-2">Loading tools...</p>
+        </div>
+
+        <!-- Tool Execution Modal -->
+        <div id="tool-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+          <div class="bg-gray-900 rounded-xl border border-gray-800 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-gray-800">
+              <div class="flex items-center justify-between">
+                <h3 id="tool-modal-title" class="text-xl font-semibold">Tool Name</h3>
+                <button onclick="closeToolModal()" class="text-gray-400 hover:text-white">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              <p id="tool-modal-description" class="text-sm text-gray-400 mt-2">Tool description</p>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1">
+              <form id="tool-form" onsubmit="executeTool(event)">
+                <div id="tool-form-fields" class="space-y-4">
+                  <!-- Dynamic form fields will be inserted here -->
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                  <button type="submit" id="tool-execute-btn" class="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Execute</span>
+                  </button>
+                  <button type="button" onclick="closeToolModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- Result Section -->
+            <div id="tool-result-section" class="hidden border-t border-gray-800">
+              <div class="p-4 bg-gray-950">
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-sm font-medium">Result</span>
+                  <div class="flex items-center gap-2">
+                    <span id="tool-result-status" class="text-xs px-2 py-1 rounded-full"></span>
+                    <span id="tool-result-time" class="text-xs text-gray-500"></span>
+                  </div>
+                </div>
+                <div id="tool-result-content" class="bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <pre class="text-sm text-gray-300 whitespace-pre-wrap font-mono"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Execution History -->
+        <div class="mt-8">
+          <h3 class="text-lg font-semibold mb-4">Recent Executions</h3>
+          <div id="tool-history" class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div class="divide-y divide-gray-800">
+              <p class="text-gray-500 text-center py-4 text-sm">No recent executions</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings Tab -->
       <div id="tab-settings" class="tab-content hidden">
         <h2 class="text-2xl font-bold mb-6">Settings</h2>
@@ -502,6 +602,7 @@
       // Load data for specific tabs
       if (tabId === 'gateway') loadGatewayTools();
       if (tabId === 'skills') loadSkills();
+      if (tabId === 'tools') loadTools();
       if (tabId === 'settings') checkHealth();
     }
 
@@ -972,6 +1073,471 @@
     document.getElementById('skills-search-input').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') searchSkills();
     });
+
+    // ==================== TOOLS FUNCTIONALITY ====================
+    let allTools = [];
+    let currentToolCategoryFilter = '';
+    let currentToolName = '';
+    let executionHistory = [];
+
+    const CATEGORY_COLORS = {
+      search: 'bg-blue-600',
+      ingest: 'bg-green-600',
+      maintenance: 'bg-orange-600',
+      memory: 'bg-purple-600',
+      chat: 'bg-pink-600',
+      utility: 'bg-gray-600',
+    };
+
+    const CATEGORY_LABELS = {
+      search: 'Search',
+      ingest: 'Ingest',
+      maintenance: 'Maintenance',
+      memory: 'Memory',
+      chat: 'Chat',
+      utility: 'Utility',
+    };
+
+    async function loadTools() {
+      const gridEl = document.getElementById('tools-grid');
+      gridEl.innerHTML = '<p class="text-gray-500 text-center py-8 col-span-2">Loading tools...</p>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/tools`);
+        const data = await res.json();
+        
+        allTools = data.tools || [];
+        document.getElementById('tools-count').textContent = `${allTools.length} tools available`;
+        
+        // Build category filters
+        const filtersEl = document.getElementById('tool-category-filters');
+        const categories = data.categories || [];
+        filtersEl.innerHTML = `
+          <button onclick="filterToolCategory('')" class="tool-category-filter px-3 py-1 bg-primary-600 rounded-full text-sm transition-colors" data-category="">
+            All (${allTools.length})
+          </button>
+          ${categories.filter(c => c.count > 0).map(c => `
+            <button onclick="filterToolCategory('${c.name}')" class="tool-category-filter px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors" data-category="${c.name}">
+              ${CATEGORY_LABELS[c.name] || c.name} (${c.count})
+            </button>
+          `).join('')}
+        `;
+        
+        renderTools(allTools);
+        loadToolHistory();
+      } catch (e) {
+        gridEl.innerHTML = `<p class="text-red-500 text-center py-8 col-span-2">Failed to load tools: ${e.message}</p>`;
+      }
+    }
+
+    function filterToolCategory(category) {
+      currentToolCategoryFilter = category;
+      
+      document.querySelectorAll('.tool-category-filter').forEach(btn => {
+        if (btn.dataset.category === category) {
+          btn.classList.remove('bg-gray-800');
+          btn.classList.add('bg-primary-600');
+        } else {
+          btn.classList.remove('bg-primary-600');
+          btn.classList.add('bg-gray-800');
+        }
+      });
+      
+      const filtered = category ? allTools.filter(t => t.category === category) : allTools;
+      renderTools(filtered);
+    }
+
+    function renderTools(tools) {
+      const gridEl = document.getElementById('tools-grid');
+      
+      if (tools.length === 0) {
+        gridEl.innerHTML = '<p class="text-gray-500 text-center py-8 col-span-2">No tools found</p>';
+        return;
+      }
+      
+      gridEl.innerHTML = tools.map(tool => `
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <h4 class="font-semibold">${tool.displayName || tool.name}</h4>
+              ${tool.isLongRunning ? '<span class="text-xs px-2 py-0.5 bg-yellow-600/30 text-yellow-400 rounded-full">Long-running</span>' : ''}
+            </div>
+            <span class="text-xs px-2 py-1 ${CATEGORY_COLORS[tool.category] || 'bg-gray-700'} rounded-full">
+              ${CATEGORY_LABELS[tool.category] || tool.category}
+            </span>
+          </div>
+          <p class="text-sm text-gray-400 mb-4">${tool.description}</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-500">${tool.parameters?.length || 0} parameter(s)</span>
+            <button onclick="openToolModal('${tool.name}')" class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+              </svg>
+              Run
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openToolModal(toolName) {
+      currentToolName = toolName;
+      const tool = allTools.find(t => t.name === toolName);
+      if (!tool) return;
+      
+      document.getElementById('tool-modal-title').textContent = tool.displayName || tool.name;
+      document.getElementById('tool-modal-description').textContent = tool.description;
+      
+      // Generate form fields
+      const fieldsEl = document.getElementById('tool-form-fields');
+      const params = tool.parameters || [];
+      
+      if (params.length === 0) {
+        fieldsEl.innerHTML = '<p class="text-gray-400 text-sm">This tool has no parameters.</p>';
+      } else {
+        fieldsEl.innerHTML = params.map(p => generateFormField(p)).join('');
+      }
+      
+      // Reset result section
+      document.getElementById('tool-result-section').classList.add('hidden');
+      document.getElementById('tool-execute-btn').disabled = false;
+      document.getElementById('tool-execute-btn').innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Execute</span>
+      `;
+      
+      document.getElementById('tool-modal').classList.remove('hidden');
+    }
+
+    function generateFormField(param) {
+      const id = `param-${param.name}`;
+      const required = param.required ? '<span class="text-red-400">*</span>' : '';
+      const defaultVal = param.default !== undefined ? param.default : '';
+      
+      let input = '';
+      
+      switch (param.type) {
+        case 'boolean':
+          input = `
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="${id}" name="${param.name}" 
+                ${defaultVal === true ? 'checked' : ''}
+                class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+              <label for="${id}" class="text-sm text-gray-300">${param.description}</label>
+            </div>
+          `;
+          break;
+        case 'number':
+          input = `
+            <input type="number" id="${id}" name="${param.name}" 
+              value="${defaultVal}"
+              placeholder="${param.description}"
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+              ${param.required ? 'required' : ''}>
+          `;
+          break;
+        case 'array':
+          input = `
+            <input type="text" id="${id}" name="${param.name}" 
+              value="${Array.isArray(defaultVal) ? defaultVal.join(', ') : ''}"
+              placeholder="${param.description} (comma-separated)"
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            <p class="text-xs text-gray-500 mt-1">Enter comma-separated values</p>
+          `;
+          break;
+        default:
+          if (param.enum && param.enum.length > 0) {
+            input = `
+              <select id="${id}" name="${param.name}" 
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                ${param.required ? 'required' : ''}>
+                ${!param.required ? '<option value="">Select...</option>' : ''}
+                ${param.enum.map(v => `<option value="${v}" ${defaultVal === v ? 'selected' : ''}>${v}</option>`).join('')}
+              </select>
+            `;
+          } else {
+            input = `
+              <input type="text" id="${id}" name="${param.name}" 
+                value="${defaultVal}"
+                placeholder="${param.description}"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                ${param.required ? 'required' : ''}>
+            `;
+          }
+      }
+      
+      if (param.type === 'boolean') {
+        return `<div class="mb-4">${input}</div>`;
+      }
+      
+      return `
+        <div>
+          <label for="${id}" class="block text-sm font-medium text-gray-300 mb-2">
+            ${param.name} ${required}
+          </label>
+          ${input}
+          ${param.type !== 'array' ? `<p class="text-xs text-gray-500 mt-1">${param.description}</p>` : ''}
+        </div>
+      `;
+    }
+
+    function closeToolModal() {
+      document.getElementById('tool-modal').classList.add('hidden');
+      currentToolName = '';
+    }
+
+    async function executeTool(event) {
+      event.preventDefault();
+      
+      const tool = allTools.find(t => t.name === currentToolName);
+      if (!tool) return;
+      
+      const executeBtn = document.getElementById('tool-execute-btn');
+      executeBtn.disabled = true;
+      executeBtn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Executing...</span>
+      `;
+      
+      // Collect form data
+      const formData = new FormData(document.getElementById('tool-form'));
+      const params = {};
+      
+      for (const param of tool.parameters || []) {
+        const value = formData.get(param.name);
+        
+        if (param.type === 'boolean') {
+          params[param.name] = formData.has(param.name);
+        } else if (param.type === 'number' && value !== '') {
+          params[param.name] = parseFloat(value);
+        } else if (param.type === 'array' && value) {
+          params[param.name] = value.split(',').map(v => v.trim()).filter(v => v);
+        } else if (value !== '') {
+          params[param.name] = value;
+        }
+      }
+      
+      try {
+        const startTime = Date.now();
+        const res = await fetch(`${API_BASE}/api/tools/${currentToolName}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        });
+        
+        const result = await res.json();
+        const elapsed = Date.now() - startTime;
+        
+        // Handle async jobs
+        if (result.async && result.jobId) {
+          showToolResult({
+            success: true,
+            message: `Job started: ${result.jobId}`,
+            data: result.message,
+          }, elapsed);
+          pollJobStatus(currentToolName, result.jobId);
+        } else {
+          showToolResult(result, elapsed);
+          addToHistory(currentToolName, params, result, elapsed);
+        }
+      } catch (e) {
+        showToolResult({ success: false, error: e.message }, 0);
+      }
+      
+      executeBtn.disabled = false;
+      executeBtn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Execute</span>
+      `;
+    }
+
+    async function pollJobStatus(toolName, jobId) {
+      const maxAttempts = 60;
+      let attempts = 0;
+      
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          showToolResult({ success: false, error: 'Job timed out' }, 0);
+          return;
+        }
+        
+        try {
+          const res = await fetch(`${API_BASE}/api/tools/${toolName}/status/${jobId}`);
+          const job = await res.json();
+          
+          if (job.status === 'completed' || job.status === 'failed') {
+            const elapsed = job.completedAt ? new Date(job.completedAt) - new Date(job.startedAt) : 0;
+            showToolResult(job.result, elapsed);
+            addToHistory(toolName, {}, job.result, elapsed);
+            loadToolHistory();
+            return;
+          }
+          
+          // Update progress if available
+          if (job.progress !== undefined) {
+            document.getElementById('tool-result-content').querySelector('pre').textContent = 
+              `Progress: ${job.progress}%\n${job.progressMessage || 'Running...'}`;
+          }
+          
+          attempts++;
+          setTimeout(poll, 1000);
+        } catch (e) {
+          attempts++;
+          setTimeout(poll, 2000);
+        }
+      };
+      
+      // Show initial running state
+      const resultSection = document.getElementById('tool-result-section');
+      resultSection.classList.remove('hidden');
+      document.getElementById('tool-result-status').textContent = 'Running';
+      document.getElementById('tool-result-status').className = 'text-xs px-2 py-1 rounded-full bg-yellow-600/30 text-yellow-400';
+      document.getElementById('tool-result-time').textContent = '';
+      document.getElementById('tool-result-content').querySelector('pre').textContent = 'Job started, waiting for completion...';
+      
+      poll();
+    }
+
+    function showToolResult(result, elapsed) {
+      const resultSection = document.getElementById('tool-result-section');
+      resultSection.classList.remove('hidden');
+      
+      const statusEl = document.getElementById('tool-result-status');
+      const timeEl = document.getElementById('tool-result-time');
+      const contentEl = document.getElementById('tool-result-content').querySelector('pre');
+      
+      if (result.success) {
+        statusEl.textContent = 'Success';
+        statusEl.className = 'text-xs px-2 py-1 rounded-full bg-green-600/30 text-green-400';
+      } else {
+        statusEl.textContent = 'Error';
+        statusEl.className = 'text-xs px-2 py-1 rounded-full bg-red-600/30 text-red-400';
+      }
+      
+      timeEl.textContent = elapsed > 0 ? `${(elapsed / 1000).toFixed(2)}s` : '';
+      
+      if (result.error) {
+        contentEl.textContent = result.error;
+      } else if (result.data) {
+        contentEl.textContent = typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2);
+      } else if (result.message) {
+        contentEl.textContent = result.message;
+      } else {
+        contentEl.textContent = JSON.stringify(result, null, 2);
+      }
+    }
+
+    function addToHistory(toolName, params, result, elapsed) {
+      executionHistory.unshift({
+        toolName,
+        params,
+        result,
+        elapsed,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Keep only last 20 executions
+      if (executionHistory.length > 20) {
+        executionHistory = executionHistory.slice(0, 20);
+      }
+      
+      renderToolHistory();
+    }
+
+    async function loadToolHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/tools/jobs`);
+        const data = await res.json();
+        
+        if (data.jobs && data.jobs.length > 0) {
+          renderToolHistoryFromJobs(data.jobs);
+        } else {
+          renderToolHistory();
+        }
+      } catch (e) {
+        renderToolHistory();
+      }
+    }
+
+    function renderToolHistoryFromJobs(jobs) {
+      const historyEl = document.getElementById('tool-history');
+      
+      if (jobs.length === 0 && executionHistory.length === 0) {
+        historyEl.innerHTML = `
+          <div class="divide-y divide-gray-800">
+            <p class="text-gray-500 text-center py-4 text-sm">No recent executions</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const allItems = [
+        ...jobs.map(j => ({
+          toolName: j.toolName,
+          success: j.success,
+          timestamp: j.startedAt,
+          status: j.status,
+        })),
+        ...executionHistory.map(h => ({
+          toolName: h.toolName,
+          success: h.result?.success,
+          timestamp: h.timestamp,
+          status: 'completed',
+        })),
+      ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+      
+      historyEl.innerHTML = `
+        <div class="divide-y divide-gray-800">
+          ${allItems.map(item => `
+            <div class="flex items-center justify-between p-3">
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full ${item.success === true ? 'bg-green-500' : item.success === false ? 'bg-red-500' : 'bg-yellow-500'}"></div>
+                <span class="font-medium">${item.toolName}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleTimeString()}</span>
+                <button onclick="openToolModal('${item.toolName}')" class="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
+                  Re-run
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderToolHistory() {
+      if (executionHistory.length === 0) {
+        document.getElementById('tool-history').innerHTML = `
+          <div class="divide-y divide-gray-800">
+            <p class="text-gray-500 text-center py-4 text-sm">No recent executions</p>
+          </div>
+        `;
+        return;
+      }
+      
+      renderToolHistoryFromJobs([]);
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeToolModal();
+    });
+    
+    // Close modal on backdrop click
+    document.getElementById('tool-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'tool-modal') closeToolModal();
+    });
+    // ==================== END TOOLS FUNCTIONALITY ====================
 
     // Initial load
     fetchConfig().then(() => {

@@ -462,17 +462,18 @@ Implement safeguards from RLM paper's Negative Results section.
 ### CRR-901: Define Tool Registry Interface
 **Estimate**: 2 points
 **Labels**: dashboard, tools, types
+**Status**: ✅ COMPLETED
 
 Create a registry system for exposing RAG tools to the dashboard UI.
 
 **File**: `src/dashboard/toolRegistry.ts`
 
 **Acceptance Criteria**:
-- [ ] ToolDefinition interface with name, description, parameters schema
-- [ ] ToolParameter interface with type, required, default, validation
-- [ ] ToolResult interface with success/error states
-- [ ] Registry supports dynamic tool registration
-- [ ] JSON Schema generation for parameter forms
+- [x] ToolDefinition interface with name, description, parameters schema
+- [x] ToolParameter interface with type, required, default, validation
+- [x] ToolResult interface with success/error states
+- [x] Registry supports dynamic tool registration
+- [x] JSON Schema generation for parameter forms
 
 ---
 
@@ -480,17 +481,18 @@ Create a registry system for exposing RAG tools to the dashboard UI.
 **Estimate**: 3 points
 **Labels**: dashboard, api
 **Blocked by**: CRR-901
+**Status**: ✅ COMPLETED
 
 Add API endpoints for tool discovery and execution.
 
 **File**: `src/dashboard/server.ts`
 
 **Acceptance Criteria**:
-- [ ] `GET /api/tools` returns list of available tools with schemas
-- [ ] `POST /api/tools/:name/execute` runs a tool with parameters
-- [ ] `GET /api/tools/:name/status/:jobId` for long-running tools
-- [ ] Proper error handling and validation
-- [ ] Rate limiting to prevent abuse
+- [x] `GET /api/tools` returns list of available tools with schemas
+- [x] `POST /api/tools/:name/execute` runs a tool with parameters
+- [x] `GET /api/tools/:name/status/:jobId` for long-running tools
+- [x] Proper error handling and validation
+- [ ] Rate limiting to prevent abuse (deferred - not critical for MVP)
 
 ---
 
@@ -498,19 +500,20 @@ Add API endpoints for tool discovery and execution.
 **Estimate**: 4 points
 **Labels**: dashboard, ui
 **Blocked by**: CRR-902
+**Status**: ✅ COMPLETED
 
 Build interactive tools section in the dashboard.
 
 **File**: `src/dashboard/public/index.html`
 
 **Acceptance Criteria**:
-- [ ] New "Tools" tab in dashboard navigation
-- [ ] Tool cards with name, description, and "Run" button
-- [ ] Dynamic form generation from parameter schemas
-- [ ] Real-time execution status and progress
-- [ ] Result display with syntax highlighting for code/JSON
-- [ ] Execution history with re-run capability
-- [ ] Tool categories/filtering (search, ingest, maintenance, etc.)
+- [x] New "Tools" tab in dashboard navigation
+- [x] Tool cards with name, description, and "Run" button
+- [x] Dynamic form generation from parameter schemas
+- [x] Real-time execution status and progress
+- [x] Result display with syntax highlighting for code/JSON
+- [x] Execution history with re-run capability
+- [x] Tool categories/filtering (search, ingest, maintenance, etc.)
 
 ---
 
@@ -518,20 +521,21 @@ Build interactive tools section in the dashboard.
 **Estimate**: 2 points
 **Labels**: dashboard, tools
 **Blocked by**: CRR-901, CRR-902
+**Status**: ✅ COMPLETED
 
 Register existing RAG tools with the dashboard registry.
 
 **File**: `src/dashboard/coreTools.ts`
 
 **Acceptance Criteria**:
-- [ ] `search` - Search knowledge base with query
-- [ ] `ingest_document` - Ingest text/URL into RAG
-- [ ] `crawl_and_ingest` - Crawl website and ingest
-- [ ] `chat_ingest` - Ingest Cursor chat history
-- [ ] `chat_list` - List available conversations
-- [ ] `memory_stats` - Show memory statistics
-- [ ] `list_sources` - List ingested sources
-- [ ] All tools have proper parameter validation
+- [x] `search` - Search knowledge base with query
+- [x] `ingest_document` - Ingest text/URL into RAG
+- [x] `crawl_and_ingest` - Crawl website and ingest
+- [x] `chat_ingest` - Ingest Cursor chat history
+- [x] `chat_list` - List available conversations
+- [x] `memory_stats` - Show memory statistics
+- [x] `list_sources` - List ingested sources
+- [x] All tools have proper parameter validation
 
 ---
 

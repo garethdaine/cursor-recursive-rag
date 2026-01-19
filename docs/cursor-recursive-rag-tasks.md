@@ -8,112 +8,118 @@ This document provides a Linear-compatible task breakdown for implementing advan
 
 ## Epic: Phase 1 - Foundation (Enhanced Schema & Temporal Decay)
 
-### CRR-101: Define Enhanced Chunk Interface
+### CRR-101: Define Enhanced Chunk Interface ✅
 **Estimate**: 1 point
 **Labels**: foundation, types
+**Status**: COMPLETED
 
 Create new TypeScript interfaces for enhanced chunks with temporal tracking, importance, decay scores, and entity tags.
 
 **File**: `src/types/memory.ts`
 
 **Acceptance Criteria**:
-- [ ] EnhancedChunk interface defined with all new fields
-- [ ] ChunkType enum with all knowledge types
-- [ ] EntityTag and EntityType defined
-- [ ] Types exported from main index
-- [ ] Existing code continues to compile
+- [x] EnhancedChunk interface defined with all new fields
+- [x] ChunkType enum with all knowledge types
+- [x] EntityTag and EntityType defined
+- [x] Types exported from main index
+- [x] Existing code continues to compile
 
 ---
 
-### CRR-102: Create Memory Metadata Store
+### CRR-102: Create Memory Metadata Store ✅
 **Estimate**: 3 points
 **Labels**: foundation, database
 **Blocks**: CRR-103, CRR-104
+**Status**: COMPLETED
 
 Implement SQLite-based metadata store for temporal tracking, relationships, and categories.
 
 **File**: `src/services/memoryMetadataStore.ts`
 
 **Acceptance Criteria**:
-- [ ] SQLite database created on first run
-- [ ] Tables: chunks_metadata, relationships, access_log, categories, processed_conversations
-- [ ] CRUD operations for all tables
-- [ ] Indexes created for performance
-- [ ] Access recording updates last_accessed_at and access_count
+- [x] SQLite database created on first run
+- [x] Tables: chunks_metadata, relationships, access_log, categories, processed_conversations
+- [x] CRUD operations for all tables
+- [x] Indexes created for performance
+- [x] Access recording updates last_accessed_at and access_count
 
 ---
 
-### CRR-103: Implement Decay Score Calculator
+### CRR-103: Implement Decay Score Calculator ✅
 **Estimate**: 2 points
 **Labels**: foundation, algorithm
 **Blocked by**: CRR-102
+**Status**: COMPLETED
 
 Create decay calculator with configurable half-life, access factors, and importance weighting.
 
 **File**: `src/services/decayCalculator.ts`
 
 **Acceptance Criteria**:
-- [ ] Decay scores range 0.0 to 1.0
-- [ ] New chunks with high importance start high
-- [ ] Frequently accessed chunks maintain high scores
-- [ ] Old unused chunks decay toward 0
-- [ ] Batch update completes in <5s for 10k chunks
-- [ ] Configurable weights and half-life
+- [x] Decay scores range 0.0 to 1.0
+- [x] New chunks with high importance start high
+- [x] Frequently accessed chunks maintain high scores
+- [x] Old unused chunks decay toward 0
+- [x] Batch update completes in <5s for 10k chunks
+- [x] Configurable weights and half-life
 
 ---
 
-### CRR-104: Integrate Metadata Store with Vector Store
+### CRR-104: Integrate Metadata Store with Vector Store ✅
 **Estimate**: 3 points
 **Labels**: foundation, integration
 **Blocked by**: CRR-102, CRR-103
+**Status**: COMPLETED
 
 Create EnhancedVectorStore wrapper that combines existing vector store with metadata tracking.
 
 **File**: `src/services/enhancedVectorStore.ts`
 
 **Acceptance Criteria**:
-- [ ] All existing tests continue to pass
-- [ ] Metadata stored for new chunks
-- [ ] Search results include decay scores
-- [ ] Access recorded for returned results
-- [ ] Re-ranking produces different order than pure similarity
+- [x] All existing tests continue to pass
+- [x] Metadata stored for new chunks
+- [x] Search results include decay scores
+- [x] Access recorded for returned results
+- [x] Re-ranking produces different order than pure similarity
 
 ---
 
 ## Epic: Phase 2 - Cursor Chat History Integration
 
-### CRR-201: Implement Cursor Database Reader
+### CRR-201: Implement Cursor Database Reader ✅
 **Estimate**: 3 points
 **Labels**: chat-history, database
+**Status**: COMPLETED
 
 Create service to read Cursor's chat history from its SQLite database.
 
 **File**: `src/services/cursorChatReader.ts`
 
 **Acceptance Criteria**:
-- [ ] Correctly locates Cursor DB on macOS, Windows, Linux
-- [ ] Reads conversations without corrupting database
-- [ ] Handles database being locked (read-only mode)
-- [ ] Returns empty array if no conversations
-- [ ] Supports filtering by date, project, code presence
+- [x] Correctly locates Cursor DB on macOS, Windows, Linux
+- [x] Reads conversations without corrupting database
+- [x] Handles database being locked (read-only mode)
+- [x] Returns empty array if no conversations
+- [x] Supports filtering by date, project, code presence
 
 ---
 
-### CRR-202: Create Conversation Processor
+### CRR-202: Create Conversation Processor ✅
 **Estimate**: 2 points
 **Labels**: chat-history, processing
 **Blocked by**: CRR-201
+**Status**: COMPLETED
 
 Process raw conversations into structured chunks with embeddings.
 
 **File**: `src/services/conversationProcessor.ts`
 
 **Acceptance Criteria**:
-- [ ] Groups messages into logical exchanges
-- [ ] Creates embeddings for each chunk
-- [ ] Extracts code blocks as separate chunks
-- [ ] Calculates reasonable importance scores
-- [ ] Extracts basic entities (languages, files)
+- [x] Groups messages into logical exchanges
+- [x] Creates embeddings for each chunk
+- [x] Extracts code blocks as separate chunks
+- [x] Calculates reasonable importance scores
+- [x] Extracts basic entities (languages, files)
 
 ---
 
@@ -718,95 +724,35 @@ Detect duplicate and near-duplicate rules using semantic similarity.
 **Acceptance Criteria** (merged into rulesAnalyzer.ts):
 - [x] Exact duplicate detection (content hash)
 - [x] Semantic similarity using embeddings (configurable threshold)
-- [ ] Detect rules that are subsets of others
-- [ ] Identify contradicting rules
-- [ ] Group related rules by topic/technology
-- [ ] Generate similarity matrix for rule set
+- [x] Detect rules that are subsets of others
+- [x] Identify contradicting rules
+- [x] Group related rules by topic/technology
+- [x] Generate similarity matrix for rule set
 
 ---
 
-### CRR-1004: Implement Rules Merger
-**Estimate**: 5 points
-**Labels**: rules, llm
-**Blocked by**: CRR-1000, CRR-1003
-
-Use LLM to intelligently merge and consolidate related rules.
-
-**File**: `src/services/rulesMerger.ts`
-
-**Acceptance Criteria**:
-- [ ] Uses LLMProvider system (CRR-1000) for AI operations
-- [ ] Merge duplicate rules preserving all unique information
-- [ ] Combine related rules into comprehensive single rules
-- [ ] Rewrite verbose rules to be more concise
-- [ ] Preserve critical details while reducing token count
-- [ ] Maintain rule intent and effectiveness
-- [ ] Support dry-run mode with preview
-- [ ] Configurable aggressiveness (conservative/balanced/aggressive)
-
----
-
-### CRR-1005: Implement Rules Optimizer Service
-**Estimate**: 4 points
-**Labels**: rules, service
-**Blocked by**: CRR-1002, CRR-1003, CRR-1004
-
-Orchestrate the full optimization pipeline.
-
-**File**: `src/services/rulesOptimizer.ts`
-
-**Acceptance Criteria**:
-- [ ] Scan folder for all rule files recursively
-- [ ] Parse and analyze all rules
-- [ ] Detect duplicates and redundancies
-- [ ] Generate optimization plan
-- [ ] Execute merges and rewrites
-- [ ] Calculate token savings (before/after)
-- [ ] Generate detailed optimization report
-- [ ] Backup original files before modification
-
----
-
-### CRR-1006: Add Rules Optimizer CLI
+### CRR-1008: Add Configurable Rules Analyzer Settings ✅
 **Estimate**: 2 points
-**Labels**: rules, cli
-**Blocked by**: CRR-1005
+**Labels**: rules, config, dashboard
+**Blocked by**: CRR-1003
+**Status**: COMPLETED
 
-Add CLI commands for rules optimization.
+Add user-configurable settings for the rules analyzer via config file and dashboard API.
 
-**File**: `src/cli/commands/rules.ts`
-
-**Acceptance Criteria**:
-- [ ] `cursor-rag rules analyze <folder>` - Analyze rules without changes
-- [ ] `cursor-rag rules optimize <folder>` - Run full optimization
-- [ ] `cursor-rag rules duplicates <folder>` - Show duplicates only
-- [ ] `--dry-run` flag for preview mode
-- [ ] `--aggressive` flag for maximum compression
-- [ ] `--backup` flag to create backups (default: true)
-- [ ] `--output <folder>` to write optimized rules to new location
-- [ ] `--llm-provider <provider>` flag to select LLM backend
-- [ ] Progress display and summary statistics
-
----
-
-### CRR-1007: Add Rules Optimizer to Dashboard
-**Estimate**: 3 points
-**Labels**: rules, dashboard
-**Blocked by**: CRR-1005, CRR-903
-
-Add rules optimization UI to dashboard tools.
-
-**File**: `src/dashboard/public/index.html`, `src/dashboard/coreTools.ts`
+**File**: `src/config/rulesConfig.ts`, `src/dashboard/server.ts`
 
 **Acceptance Criteria**:
-- [ ] "Rules Optimizer" tool card in Tools section
-- [ ] Folder path input with validation
-- [ ] Analysis results display with duplicate highlighting
-- [ ] Before/after comparison view
-- [ ] Token count savings visualization
-- [ ] LLM provider selection dropdown
-- [ ] One-click optimize with confirmation
-- [ ] Download optimized rules as zip
+- [x] RulesAnalyzerConfig schema with Zod validation
+- [x] Analysis settings (duplicateThreshold, maxAgeDays, oldYearThreshold)
+- [x] Custom version check patterns (user-defined technology versions)
+- [x] Custom deprecation patterns (user-defined deprecated code detectors)
+- [x] Custom tag extraction patterns
+- [x] File include/exclude patterns
+- [x] Dashboard API: GET/PUT /api/rules/config
+- [x] Dashboard API: POST /api/rules/validate-pattern
+- [x] Dashboard API: POST /api/rules/test-pattern
+- [x] Dashboard API: CRUD for version-checks and deprecation-patterns
+- [x] Example templates for common technologies (disabled by default)
 
 ---
 
@@ -1265,10 +1211,10 @@ Automatically route documents to appropriate pipeline.
 | Phase 7: Enhanced Retrieval | 3 | 8 |
 | Phase 8: RLM Recursive Retrieval | 4 | 16 |
 | Phase 9: Dashboard Tools UI | 4 | 11 |
-| Phase 10: Rules Optimizer | 8 | 28 |
+| Phase 10: Rules Optimizer | 9 | 30 |
 | Phase 11: Test Suite | 13 | 44 |
 | Phase 12: PageIndex Integration | 9 | 25 |
-| **Total** | **57** | **174** |
+| **Total** | **58** | **176** |
 
 ---
 

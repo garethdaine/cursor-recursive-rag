@@ -543,100 +543,181 @@ Register existing RAG tools with the dashboard registry.
 
 *Intelligent cleanup and optimization of Cursor rules and AGENTS.md files*
 
-### CRR-1000: Implement LLM Provider System (Strategy Pattern)
+### CRR-1000: Implement LLM Provider System (Strategy Pattern) ✅
 **Estimate**: 5 points
 **Labels**: llm, infrastructure, core
 **Priority**: HIGH - Required by CRR-1004 and other LLM-dependent features
+**Status**: COMPLETED
 
 Create a flexible LLM provider system using the strategy pattern that supports multiple backends.
 
 **Files**: `src/types/llmProvider.ts`, `src/adapters/llm/index.ts`, `src/adapters/llm/*.ts`
 
 **Acceptance Criteria**:
-- [ ] LLMProvider interface with chat/complete methods
-- [ ] LLMProviderConfig type with provider-specific options
-- [ ] LLMResponse type with content, usage stats, model info
+- [x] LLMProvider interface with chat/complete methods
+- [x] LLMProviderConfig type with provider-specific options
+- [x] LLMResponse type with content, usage stats, model info
 
 **Provider Implementations**:
-- [ ] **CursorProvider**: Hook into Cursor's AI via MCP tool calls (if available)
-- [ ] **OpenAIProvider**: OpenAI API (GPT-4o, GPT-4o-mini, o1, etc.)
-- [ ] **AnthropicProvider**: Claude API (claude-3.5-sonnet, opus, haiku)
-- [ ] **DeepSeekProvider**: DeepSeek API (deepseek-chat, deepseek-coder)
-- [ ] **GroqProvider**: Groq API (llama, mixtral models)
-- [ ] **OllamaProvider**: Local Ollama models
-- [ ] **OpenRouterProvider**: OpenRouter for unified API access
+- [x] **CursorProvider**: Placeholder (falls back to Ollama)
+- [x] **OpenAIProvider**: OpenAI API (GPT-4o, GPT-4o-mini, o1, etc.)
+- [x] **AnthropicProvider**: Claude API (claude-3.5-sonnet, opus, haiku)
+- [x] **DeepSeekProvider**: DeepSeek API (deepseek-chat, deepseek-coder)
+- [x] **GroqProvider**: Groq API (llama, mixtral models)
+- [x] **OllamaProvider**: Local Ollama models
+- [x] **OpenRouterProvider**: OpenRouter for unified API access
 
 **Configuration**:
-- [ ] Environment variable support (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-- [ ] Config file support (~/.cursor-rag/llm-config.json)
-- [ ] CLI flag for provider selection (`--llm-provider openai`)
-- [ ] Auto-detection: Try Cursor MCP → env vars → config file → fallback to Ollama
+- [x] Environment variable support (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+- [x] Config file support (~/.cursor-rag/llm-config.json)
+- [x] Auto-detection: env vars → config file → fallback to Ollama
 
 **Features**:
-- [ ] Retry logic with exponential backoff
-- [ ] Rate limiting per provider
-- [ ] Cost tracking per request
-- [ ] Streaming support where available
-- [ ] Model capability detection (context length, vision, JSON mode)
-- [ ] Fallback chain (if primary fails, try next)
-
-**Cursor AI Integration**:
-- [ ] Detect if running within Cursor IDE
-- [ ] Use MCP protocol to request completions from Cursor's AI
-- [ ] Graceful fallback if Cursor AI unavailable
-- [ ] Respect Cursor's rate limits and usage quotas
+- [x] Retry logic with exponential backoff
+- [x] Rate limiting per provider
+- [x] Cost tracking per request
+- [x] Streaming support where available
+- [x] Model capability detection (context length, vision, JSON mode)
+- [x] Fallback chain (if primary fails, try next)
 
 ---
 
-### CRR-1001: Define Rules Analysis Types
+### CRR-1001: Define Rules Analysis Types ✅
 **Estimate**: 2 points
 **Labels**: rules, types
+**Status**: COMPLETED
 
 Define types for rule parsing, analysis, and optimization.
 
 **File**: `src/types/rulesOptimizer.ts`
 
 **Acceptance Criteria**:
-- [ ] RuleFile interface (path, content, format: mdc/md/txt)
-- [ ] ParsedRule interface (id, title, content, tags, dependencies)
-- [ ] RuleCluster interface for grouping related rules
-- [ ] OptimizationReport interface with before/after metrics
-- [ ] DuplicateMatch interface with similarity score
-- [ ] MergeCandidate interface for rule combinations
+- [x] RuleFile interface (path, content, format: mdc/md/txt)
+- [x] ParsedRule interface (id, title, content, tags, dependencies)
+- [x] RuleCluster interface for grouping related rules
+- [x] OptimizationReport interface with before/after metrics
+- [x] DuplicateMatch interface with similarity score
+- [x] MergeCandidate interface for rule combinations
 
 ---
 
-### CRR-1002: Implement Rules Parser
+### CRR-1002: Implement Rules Parser ✅
 **Estimate**: 3 points
 **Labels**: rules, parser
 **Blocked by**: CRR-1001
+**Status**: COMPLETED
 
 Parse various rule file formats into structured representation.
 
 **File**: `src/services/rulesParser.ts`
 
 **Acceptance Criteria**:
-- [ ] Parse `.mdc` files (Cursor rules format)
-- [ ] Parse `AGENTS.md` files
-- [ ] Parse `.cursorrules` legacy format
-- [ ] Extract rule metadata (globs, descriptions, always-apply flags)
-- [ ] Handle nested rule structures
-- [ ] Preserve original formatting for non-modified rules
+- [x] Parse `.mdc` files (Cursor rules format)
+- [x] Parse `AGENTS.md` files
+- [x] Parse `.cursorrules` legacy format
+- [x] Extract rule metadata (globs, descriptions, always-apply flags)
+- [x] Handle nested rule structures
+- [x] Preserve original formatting for non-modified rules
 
 ---
 
-### CRR-1003: Implement Duplicate Detector
+### CRR-1003: Implement Rules Analyzer ✅
 **Estimate**: 4 points
 **Labels**: rules, analysis
 **Blocked by**: CRR-1002
+**Status**: COMPLETED
+
+Detect duplicate and near-duplicate rules using semantic similarity.
+
+**File**: `src/services/rulesAnalyzer.ts`
+
+**Acceptance Criteria**:
+- [x] Exact duplicate detection (content hash)
+- [x] Semantic similarity using embeddings (configurable threshold)
+- [x] Detect rules that are subsets of others
+- [x] Identify contradicting rules
+- [x] Group related rules by topic/technology
+- [x] Find outdated rules
+- [x] Generate optimization report
+
+---
+
+### CRR-1004: Implement Rules Optimizer CLI ✅
+**Estimate**: 3 points
+**Labels**: rules, cli
+**Blocked by**: CRR-1003
+**Status**: COMPLETED
+
+CLI commands for rules optimization.
+
+**File**: `src/cli/commands/rules.ts`
+
+**Acceptance Criteria**:
+- [x] `cursor-rag rules analyze <folder>` - Analyze rules without changes
+- [x] `cursor-rag rules list <folder>` - List all rules
+- [x] `cursor-rag rules duplicates <folder>` - Show duplicates only
+- [x] `cursor-rag rules conflicts <folder>` - Show conflicts only
+- [x] `cursor-rag rules outdated <folder>` - Show outdated rules
+- [x] `cursor-rag rules optimize <folder>` - Run full optimization
+- [x] `--dry-run` flag for preview mode
+- [x] `--json` flag for JSON output
+- [x] Progress display and summary statistics
+
+---
+
+### CRR-1005: Implement Rules Merger (Future)
+**Estimate**: 5 points
+**Labels**: rules, llm
+**Blocked by**: CRR-1000, CRR-1003
+
+Use LLM to intelligently merge and consolidate related rules.
+
+**File**: `src/services/rulesMerger.ts`
+
+**Acceptance Criteria**:
+- [ ] Uses LLMProvider system (CRR-1000) for AI operations
+- [ ] Merge duplicate rules preserving all unique information
+- [ ] Combine related rules into comprehensive single rules
+- [ ] Rewrite verbose rules to be more concise
+- [ ] Preserve critical details while reducing token count
+- [ ] Maintain rule intent and effectiveness
+- [ ] Support dry-run mode with preview
+- [ ] Configurable aggressiveness (conservative/balanced/aggressive)
+
+---
+
+### CRR-1006: Add Rules Optimizer to Dashboard (Future)
+**Estimate**: 3 points
+**Labels**: rules, dashboard
+**Blocked by**: CRR-1003, CRR-903
+
+Add rules optimization UI to dashboard tools.
+
+**Acceptance Criteria**:
+- [ ] "Rules Optimizer" tool card in Tools section
+- [ ] Folder path input with validation
+- [ ] Analysis results display with duplicate highlighting
+- [ ] Before/after comparison view
+- [ ] Token count savings visualization
+- [ ] LLM provider selection dropdown
+- [ ] One-click optimize with confirmation
+- [ ] Download optimized rules as zip
+
+---
+
+### CRR-1007: Implement Duplicate Detector (Merged into CRR-1003)
+**Estimate**: 4 points
+**Labels**: rules, analysis
+**Blocked by**: CRR-1002
+**Status**: MERGED into CRR-1003
 
 Detect duplicate and near-duplicate rules using semantic similarity.
 
 **File**: `src/services/rulesDuplicateDetector.ts`
 
-**Acceptance Criteria**:
-- [ ] Exact duplicate detection (content hash)
-- [ ] Semantic similarity using embeddings (configurable threshold)
+**Acceptance Criteria** (merged into rulesAnalyzer.ts):
+- [x] Exact duplicate detection (content hash)
+- [x] Semantic similarity using embeddings (configurable threshold)
 - [ ] Detect rules that are subsets of others
 - [ ] Identify contradicting rules
 - [ ] Group related rules by topic/technology

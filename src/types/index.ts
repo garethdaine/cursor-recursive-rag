@@ -113,3 +113,9 @@ export * from './relationships.js';
 
 // Re-export category types
 export * from './categories.js';
+
+// Re-export LLM provider types
+export * from './llmProvider.js';
+
+// Re-export rules optimizer types
+export * from './rulesOptimizer.js';

@@ -13,6 +13,16 @@ import { crawlAndIngestTool } from './crawl.js';
 import { listSourcesTool } from './list-sources.js';
 import { gatewaySearchToolsTool, gatewayCallToolTool, gatewayExecuteSkillTool, gatewayHealthTool } from './gateway.js';
 import { listOpenSkillsTool, readOpenSkillTool, ingestSkillsTool, searchSkillsTool } from './skills.js';
+import {
+  searchPastSolutionsTool,
+  findSimilarIssuesTool,
+  getProjectPatternsTool,
+  recallDecisionTool,
+  getCategorySummaryTool,
+  ingestChatHistoryTool,
+  memoryStatsTool,
+  memoryToolDefinitions,
+} from './memory.js';
 
 export function registerTools(
   server: Server,
@@ -253,7 +263,9 @@ export function registerTools(
           },
           required: ['query']
         }
-      }
+      },
+      // Memory tools
+      ...memoryToolDefinitions
     ]
   }));
 
@@ -299,6 +311,21 @@ export function registerTools(
         case 'search_openskills':
           const searchResult = await searchSkillsTool(dependencies.config, args as any);
           return { content: [{ type: 'text', text: JSON.stringify(searchResult, null, 2) }] };
+        // Memory tools
+        case 'search_past_solutions':
+          return await searchPastSolutionsTool(args as any, dependencies);
+        case 'find_similar_issues':
+          return await findSimilarIssuesTool(args as any, dependencies);
+        case 'get_project_patterns':
+          return await getProjectPatternsTool(args as any, dependencies);
+        case 'recall_decision':
+          return await recallDecisionTool(args as any, dependencies);
+        case 'get_category_summary':
+          return await getCategorySummaryTool(args as any, dependencies);
+        case 'ingest_chat_history':
+          return await ingestChatHistoryTool(args as any, dependencies);
+        case 'memory_stats':
+          return await memoryStatsTool(dependencies);
         default:
           throw new Error(`Unknown tool: ${name}`);
       }

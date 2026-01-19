@@ -320,7 +320,7 @@ Add CLI commands for maintenance operations.
 
 ## Epic: Phase 7 - Enhanced Retrieval Scoring
 
-### CRR-701: Implement Hybrid Scorer
+### CRR-701: Implement Hybrid Scorer ✅
 **Estimate**: 4 points
 **Labels**: retrieval, scoring
 **Blocked by**: CRR-402, CRR-502
@@ -330,36 +330,36 @@ Create hybrid scoring combining similarity, decay, importance, and graph relatio
 **File**: `src/services/hybridScorer.ts`
 
 **Acceptance Criteria**:
-- [ ] Final scores combine all components correctly
-- [ ] Graph boost increases scores for related items
-- [ ] Type boost favours solutions and patterns
-- [ ] Tiered retrieval tries summaries first
-- [ ] Recency boost favours recently accessed items
-- [ ] Configurable weights
+- [x] Final scores combine all components correctly (weighted combination of 6 factors)
+- [x] Graph boost increases scores for related items (via getGraphContext traversal)
+- [x] Type boost favours solutions and patterns (configurable typeBoosts map)
+- [x] Tiered retrieval tries summaries first (tieredRetrieval method)
+- [x] Recency boost favours recently accessed items (calculateRecencyScore with half-life)
+- [x] Configurable weights (ScoringConfig with DEFAULT_SCORING_CONFIG)
 
 ---
 
-### CRR-702: Add New MCP Tools
+### CRR-702: Add New MCP Tools ✅
 **Estimate**: 3 points
 **Labels**: mcp, tools
 **Blocked by**: CRR-701
 
 Add new MCP tools for memory features.
 
-**File**: `src/mcp/memoryTools.ts`
+**File**: `src/server/tools/memory.ts`
 
 **Acceptance Criteria**:
-- [ ] search_past_solutions tool working
-- [ ] find_similar_issues tool working
-- [ ] get_project_patterns tool working
-- [ ] recall_decision tool working
-- [ ] get_category_summary tool working
-- [ ] ingest_chat_history tool working
-- [ ] memory_stats tool working
+- [x] search_past_solutions tool working (searches solution chunks with hybrid scoring)
+- [x] find_similar_issues tool working (includes graph traversal for related items)
+- [x] get_project_patterns tool working (filters by category, sorted by importance)
+- [x] recall_decision tool working (searches decision/standard chunks)
+- [x] get_category_summary tool working (returns category summary and metadata)
+- [x] ingest_chat_history tool working (with optional knowledge extraction)
+- [x] memory_stats tool working (comprehensive stats output)
 
 ---
 
-### CRR-703: Create Memory Configuration
+### CRR-703: Create Memory Configuration ✅
 **Estimate**: 1 point
 **Labels**: config
 
@@ -368,10 +368,10 @@ Define configuration schema and defaults for all memory features.
 **File**: `src/config/memoryConfig.ts`
 
 **Acceptance Criteria**:
-- [ ] MemoryConfig interface complete
-- [ ] DEFAULT_MEMORY_CONFIG with sensible defaults
-- [ ] Config validation
-- [ ] Environment variable overrides
+- [x] MemoryConfig interface complete (Zod schema with 7 config sections)
+- [x] DEFAULT_MEMORY_CONFIG with sensible defaults (all sections have defaults)
+- [x] Config validation (validateMemoryConfig function with weight sum check)
+- [x] Environment variable overrides (getMemoryConfigWithEnvOverrides function)
 
 ---
 

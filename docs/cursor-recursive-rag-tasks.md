@@ -539,6 +539,51 @@ Register existing RAG tools with the dashboard registry.
 
 *Intelligent cleanup and optimization of Cursor rules and AGENTS.md files*
 
+### CRR-1000: Implement LLM Provider System (Strategy Pattern)
+**Estimate**: 5 points
+**Labels**: llm, infrastructure, core
+**Priority**: HIGH - Required by CRR-1004 and other LLM-dependent features
+
+Create a flexible LLM provider system using the strategy pattern that supports multiple backends.
+
+**Files**: `src/types/llmProvider.ts`, `src/adapters/llm/index.ts`, `src/adapters/llm/*.ts`
+
+**Acceptance Criteria**:
+- [ ] LLMProvider interface with chat/complete methods
+- [ ] LLMProviderConfig type with provider-specific options
+- [ ] LLMResponse type with content, usage stats, model info
+
+**Provider Implementations**:
+- [ ] **CursorProvider**: Hook into Cursor's AI via MCP tool calls (if available)
+- [ ] **OpenAIProvider**: OpenAI API (GPT-4o, GPT-4o-mini, o1, etc.)
+- [ ] **AnthropicProvider**: Claude API (claude-3.5-sonnet, opus, haiku)
+- [ ] **DeepSeekProvider**: DeepSeek API (deepseek-chat, deepseek-coder)
+- [ ] **GroqProvider**: Groq API (llama, mixtral models)
+- [ ] **OllamaProvider**: Local Ollama models
+- [ ] **OpenRouterProvider**: OpenRouter for unified API access
+
+**Configuration**:
+- [ ] Environment variable support (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+- [ ] Config file support (~/.cursor-rag/llm-config.json)
+- [ ] CLI flag for provider selection (`--llm-provider openai`)
+- [ ] Auto-detection: Try Cursor MCP → env vars → config file → fallback to Ollama
+
+**Features**:
+- [ ] Retry logic with exponential backoff
+- [ ] Rate limiting per provider
+- [ ] Cost tracking per request
+- [ ] Streaming support where available
+- [ ] Model capability detection (context length, vision, JSON mode)
+- [ ] Fallback chain (if primary fails, try next)
+
+**Cursor AI Integration**:
+- [ ] Detect if running within Cursor IDE
+- [ ] Use MCP protocol to request completions from Cursor's AI
+- [ ] Graceful fallback if Cursor AI unavailable
+- [ ] Respect Cursor's rate limits and usage quotas
+
+---
+
 ### CRR-1001: Define Rules Analysis Types
 **Estimate**: 2 points
 **Labels**: rules, types
@@ -598,13 +643,14 @@ Detect duplicate and near-duplicate rules using semantic similarity.
 ### CRR-1004: Implement Rules Merger
 **Estimate**: 5 points
 **Labels**: rules, llm
-**Blocked by**: CRR-1003
+**Blocked by**: CRR-1000, CRR-1003
 
 Use LLM to intelligently merge and consolidate related rules.
 
 **File**: `src/services/rulesMerger.ts`
 
 **Acceptance Criteria**:
+- [ ] Uses LLMProvider system (CRR-1000) for AI operations
 - [ ] Merge duplicate rules preserving all unique information
 - [ ] Combine related rules into comprehensive single rules
 - [ ] Rewrite verbose rules to be more concise
@@ -653,6 +699,7 @@ Add CLI commands for rules optimization.
 - [ ] `--aggressive` flag for maximum compression
 - [ ] `--backup` flag to create backups (default: true)
 - [ ] `--output <folder>` to write optimized rules to new location
+- [ ] `--llm-provider <provider>` flag to select LLM backend
 - [ ] Progress display and summary statistics
 
 ---
@@ -672,6 +719,7 @@ Add rules optimization UI to dashboard tools.
 - [ ] Analysis results display with duplicate highlighting
 - [ ] Before/after comparison view
 - [ ] Token count savings visualization
+- [ ] LLM provider selection dropdown
 - [ ] One-click optimize with confirmation
 - [ ] Download optimized rules as zip
 
@@ -956,9 +1004,9 @@ Document testing strategy and generate coverage reports.
 | Phase 7: Enhanced Retrieval | 3 | 8 |
 | Phase 8: RLM Recursive Retrieval | 4 | 16 |
 | Phase 9: Dashboard Tools UI | 4 | 11 |
-| Phase 10: Rules Optimizer | 7 | 23 |
+| Phase 10: Rules Optimizer | 8 | 28 |
 | Phase 11: Test Suite | 13 | 44 |
-| **Total** | **47** | **144** |
+| **Total** | **48** | **149** |
 
 ---
 
@@ -984,14 +1032,15 @@ Document testing strategy and generate coverage reports.
 - CRR-801, CRR-802, CRR-803, CRR-804
 - **Points**: 16
 
-### Sprint 5 (Week 9-10): Dashboard Tools + Rules Optimizer
+### Sprint 5 (Week 9-10): Dashboard Tools + LLM Provider + Rules Start
 - CRR-901, CRR-902, CRR-903, CRR-904
-- CRR-1001, CRR-1002, CRR-1003
-- **Points**: 20
+- CRR-1000 (LLM Provider System - enables Phase 10 LLM features)
+- CRR-1001, CRR-1002
+- **Points**: 23
 
 ### Sprint 6 (Week 11-12): Rules Optimizer Completion
-- CRR-1004, CRR-1005, CRR-1006, CRR-1007
-- **Points**: 14
+- CRR-1003, CRR-1004, CRR-1005, CRR-1006, CRR-1007
+- **Points**: 19
 
 **Total estimated time: 11-12 weeks**
 
@@ -1027,9 +1076,17 @@ CRR-901 ──── CRR-902 ──── CRR-903
                     └──── CRR-904
 
 Phase 10: Rules Optimizer (can run in parallel)
-CRR-1001 ──── CRR-1002 ──── CRR-1003 ──── CRR-1004
-                                    └──── CRR-1005 ──── CRR-1006
-                                                  └──── CRR-1007 (requires CRR-903)
+CRR-1000 (LLM Provider) ──┐
+                          ├──── CRR-1004 (Rules Merger - needs LLM)
+CRR-1001 ──── CRR-1002 ──── CRR-1003 ──┘
+                                  └──── CRR-1005 ──── CRR-1006
+                                              └──── CRR-1007 (requires CRR-903)
+
+LLM Provider Priority Order (CRR-1000):
+1. Cursor AI (via MCP) → if running in Cursor IDE
+2. Environment vars → OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.
+3. Config file → ~/.cursor-rag/llm-config.json
+4. Ollama → local fallback (free, no API key)
 
 Phase 11: Test Suite (can run in parallel, tests existing features)
 CRR-1101 (Infrastructure) ──┬── CRR-1102 (Types/Utils)
@@ -1050,6 +1107,8 @@ Notes:
 - Phase 9 (Dashboard Tools) is independent, can start anytime
 - Phase 10 (Rules Optimizer) is independent, can start anytime
 - Phase 11 (Test Suite) is independent, can start anytime - tests existing code
+- CRR-1000 (LLM Provider) enables all LLM-dependent features across the system
+- CRR-1004 depends on CRR-1000 + CRR-1003 for LLM-powered merging
 - CRR-1007 depends on CRR-903 (Tools UI Panel) for dashboard integration
 - CRR-1101 (Test Infrastructure) should be done first in Phase 11
 ```

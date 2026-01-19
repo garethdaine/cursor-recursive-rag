@@ -527,6 +527,21 @@ export class MemoryMetadataStore {
     }));
   }
 
+  getCategoryChunks(categoryId: string): CategoryItem[] {
+    const rows = this.db.prepare(`
+      SELECT * FROM category_items WHERE category_id = ?
+      ORDER BY relevance_score DESC
+    `).all(categoryId) as any[];
+    
+    return rows.map(row => ({
+      id: row.id,
+      chunkId: row.chunk_id,
+      categoryId: row.category_id,
+      relevanceScore: row.relevance_score,
+      assignedAt: row.assigned_at,
+    }));
+  }
+
   // ==================== Processed Conversations ====================
 
   markConversationProcessed(

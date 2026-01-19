@@ -110,3 +110,6 @@ export * from './extractedKnowledge.js';
 
 // Re-export relationship types
 export * from './relationships.js';
+
+// Re-export category types
+export * from './categories.js';

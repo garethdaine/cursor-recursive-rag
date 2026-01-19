@@ -241,37 +241,41 @@ Create graph operations for relationship-based retrieval and contradiction detec
 
 ## Epic: Phase 5 - Hierarchical Memory (Categories/Summaries)
 
-### CRR-501: Define Category Structure
+### CRR-501: Define Category Structure ✅
 **Estimate**: 1 point
 **Labels**: categories, types
+**Status**: COMPLETED
 
 Define category types and default categories.
 
 **File**: `src/types/categories.ts`
 
 **Acceptance Criteria**:
-- [ ] Category interface with summary and stats
-- [ ] CategoryItem interface for assignments
-- [ ] DEFAULT_CATEGORIES array with 10 categories
-- [ ] Types exported
+- [x] Category interface with summary and stats (ExtendedCategory, CategoryWithStats)
+- [x] CategoryItem interface for assignments (re-exported from memory.ts)
+- [x] DEFAULT_CATEGORIES array with 10 categories
+- [x] Types exported
+- [x] Helper functions: findCategoriesByTags, scoreCategoryMatch, getDefaultCategoryNames
 
 ---
 
-### CRR-502: Implement Category Manager
+### CRR-502: Implement Category Manager ✅
 **Estimate**: 5 points
 **Labels**: categories, service
 **Blocked by**: CRR-501, CRR-302
+**Status**: COMPLETED
 
 Create service for category management and summary evolution.
 
 **File**: `src/services/categoryManager.ts`
 
 **Acceptance Criteria**:
-- [ ] Default categories created on first run
-- [ ] Chunks classified with relevance scores
-- [ ] Summaries evolve as new items added
-- [ ] Contradictions handled (new info updates summary)
-- [ ] Category selection uses LLM for relevance
+- [x] Default categories created on first run (initialize method)
+- [x] Chunks classified with relevance scores (heuristic + LLM modes)
+- [x] Summaries evolve as new items added (evolveSummary method)
+- [x] Contradictions handled (LLM detects updates/changes)
+- [x] Category selection uses LLM for relevance (selectRelevantCategories)
+- [x] Additional: keyword matching, tag extraction, custom category creation
 
 ---
 

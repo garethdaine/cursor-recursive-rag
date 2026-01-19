@@ -522,6 +522,107 @@
             </div>
           </div>
 
+          <!-- Rules Analyzer Settings -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Rules Analyzer
+            </h3>
+            <p class="text-sm text-gray-400 mb-4">Configure how the rules analyzer detects duplicates, outdated patterns, and conflicts in your Cursor rules.</p>
+            
+            <!-- Analysis Settings -->
+            <div class="space-y-4 mb-6">
+              <h4 class="text-sm font-medium text-gray-300">Analysis Settings</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Duplicate Threshold</label>
+                  <input type="number" id="rules-duplicate-threshold" min="0" max="1" step="0.05" value="0.7" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <p class="text-xs text-gray-500 mt-1">Similarity score (0-1) to flag as duplicate</p>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Max Age (Days)</label>
+                  <input type="number" id="rules-max-age-days" min="30" value="365" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <p class="text-xs text-gray-500 mt-1">Days before flagging as outdated</p>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Old Year Threshold</label>
+                  <input type="number" id="rules-old-year-threshold" min="1" value="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                  <p class="text-xs text-gray-500 mt-1">Years back to consider "old"</p>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-4">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="rules-detect-conflicts" checked class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                  <label for="rules-detect-conflicts" class="text-sm text-gray-300">Detect Conflicts</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="rules-detect-outdated" checked class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                  <label for="rules-detect-outdated" class="text-sm text-gray-300">Detect Outdated</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="rules-use-llm" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-primary-600 focus:ring-primary-500">
+                  <label for="rules-use-llm" class="text-sm text-gray-300">Use LLM for Analysis</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Version Check Patterns -->
+            <div class="mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-medium text-gray-300">Version Check Patterns</h4>
+                <button onclick="addVersionCheck()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add Pattern
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mb-3">Define patterns to detect outdated version references in your rules.</p>
+              <div id="version-checks-list" class="space-y-2">
+                <!-- Version checks will be populated here -->
+              </div>
+              <div id="version-checks-empty" class="text-sm text-gray-500 italic hidden">No version checks configured. Click "Add Pattern" to create one.</div>
+            </div>
+
+            <!-- Deprecation Patterns -->
+            <div class="mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-medium text-gray-300">Deprecation Patterns</h4>
+                <button onclick="addDeprecationPattern()" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add Pattern
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mb-3">Define patterns to detect deprecated code practices in your rules.</p>
+              <div id="deprecation-patterns-list" class="space-y-2">
+                <!-- Deprecation patterns will be populated here -->
+              </div>
+              <div id="deprecation-patterns-empty" class="text-sm text-gray-500 italic hidden">No deprecation patterns configured. Click "Add Pattern" to create one.</div>
+            </div>
+
+            <!-- Example Templates -->
+            <div class="border-t border-gray-800 pt-4">
+              <h4 class="text-sm font-medium text-gray-300 mb-3">Quick Add from Templates</h4>
+              <div class="flex flex-wrap gap-2" id="rules-templates">
+                <!-- Templates will be populated here -->
+              </div>
+            </div>
+
+            <!-- Save Rules Config Button -->
+            <div class="flex justify-end mt-4">
+              <button onclick="saveRulesConfig()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Save Rules Config
+              </button>
+            </div>
+          </div>
+
           <!-- Proxy Settings -->
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h3 class="text-lg font-semibold mb-4">Rotating Proxy Configuration</h3>
@@ -1538,6 +1639,274 @@
       if (e.target.id === 'tool-modal') closeToolModal();
     });
     // ==================== END TOOLS FUNCTIONALITY ====================
+
+    // ==================== RULES ANALYZER CONFIGURATION ====================
+    let rulesConfig = null;
+    let rulesExamples = null;
+
+    async function loadRulesConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/config`);
+        const data = await res.json();
+        rulesConfig = data.config;
+        rulesExamples = data.examples;
+        
+        // Populate form fields
+        document.getElementById('rules-duplicate-threshold').value = rulesConfig.analysis.duplicateThreshold;
+        document.getElementById('rules-max-age-days').value = rulesConfig.analysis.maxAgeDays;
+        document.getElementById('rules-old-year-threshold').value = rulesConfig.analysis.oldYearThreshold;
+        document.getElementById('rules-detect-conflicts').checked = rulesConfig.analysis.detectConflicts;
+        document.getElementById('rules-detect-outdated').checked = rulesConfig.analysis.detectOutdated;
+        document.getElementById('rules-use-llm').checked = rulesConfig.analysis.useLLM;
+        
+        renderVersionChecks();
+        renderDeprecationPatterns();
+        renderTemplates();
+      } catch (e) {
+        console.error('Failed to load rules config:', e);
+      }
+    }
+
+    function renderVersionChecks() {
+      const list = document.getElementById('version-checks-list');
+      const empty = document.getElementById('version-checks-empty');
+      
+      if (!rulesConfig.versionChecks || rulesConfig.versionChecks.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      empty.classList.add('hidden');
+      list.innerHTML = rulesConfig.versionChecks.map((check, index) => `
+        <div class="flex items-center gap-3 bg-gray-800 rounded-lg p-3 ${!check.enabled ? 'opacity-50' : ''}">
+          <input type="checkbox" ${check.enabled ? 'checked' : ''} 
+            onchange="toggleVersionCheck(${index})"
+            class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-primary-600 focus:ring-primary-500">
+          <div class="flex-1">
+            <span class="font-medium text-sm">${check.name}</span>
+            <span class="text-xs text-gray-500 ml-2">v${check.currentVersion}</span>
+            <code class="text-xs text-gray-400 ml-2 bg-gray-900 px-1 rounded">${escapeHtml(check.pattern)}</code>
+          </div>
+          <button onclick="deleteVersionCheck(${index})" class="text-gray-500 hover:text-red-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderDeprecationPatterns() {
+      const list = document.getElementById('deprecation-patterns-list');
+      const empty = document.getElementById('deprecation-patterns-empty');
+      
+      if (!rulesConfig.deprecationPatterns || rulesConfig.deprecationPatterns.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      
+      empty.classList.add('hidden');
+      list.innerHTML = rulesConfig.deprecationPatterns.map((pattern, index) => `
+        <div class="flex items-center gap-3 bg-gray-800 rounded-lg p-3 ${!pattern.enabled ? 'opacity-50' : ''}">
+          <input type="checkbox" ${pattern.enabled ? 'checked' : ''} 
+            onchange="toggleDeprecationPattern(${index})"
+            class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-primary-600 focus:ring-primary-500">
+          <div class="flex-1">
+            <span class="font-medium text-sm">${pattern.name}</span>
+            <p class="text-xs text-gray-400 mt-1">${escapeHtml(pattern.reason)}</p>
+            <code class="text-xs text-gray-500 bg-gray-900 px-1 rounded mt-1 inline-block">${escapeHtml(pattern.pattern)}</code>
+          </div>
+          <button onclick="deleteDeprecationPattern(${index})" class="text-gray-500 hover:text-red-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderTemplates() {
+      const container = document.getElementById('rules-templates');
+      if (!rulesExamples) return;
+      
+      const versionBtns = rulesExamples.versionChecks.map(v => `
+        <button onclick="addVersionCheckFromTemplate('${v.name}', '${v.pattern.replace(/'/g, "\\'")}', '${v.currentVersion}')" 
+          class="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
+          ${v.name} ${v.currentVersion}
+        </button>
+      `).join('');
+      
+      const deprecationBtns = rulesExamples.deprecationPatterns.map(d => `
+        <button onclick="addDeprecationFromTemplate('${d.name}', '${d.pattern.replace(/'/g, "\\'")}', '${d.reason.replace(/'/g, "\\'")}')" 
+          class="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded transition-colors">
+          ${d.name}
+        </button>
+      `).join('');
+      
+      container.innerHTML = `
+        <span class="text-xs text-gray-500">Versions:</span> ${versionBtns}
+        <span class="text-xs text-gray-500 ml-2">Patterns:</span> ${deprecationBtns}
+      `;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function toggleVersionCheck(index) {
+      try {
+        await fetch(`${API_BASE}/api/rules/config/version-checks/${index}/toggle`, { method: 'POST' });
+        rulesConfig.versionChecks[index].enabled = !rulesConfig.versionChecks[index].enabled;
+        renderVersionChecks();
+      } catch (e) {
+        alert('Failed to toggle: ' + e.message);
+      }
+    }
+
+    async function toggleDeprecationPattern(index) {
+      try {
+        await fetch(`${API_BASE}/api/rules/config/deprecation-patterns/${index}/toggle`, { method: 'POST' });
+        rulesConfig.deprecationPatterns[index].enabled = !rulesConfig.deprecationPatterns[index].enabled;
+        renderDeprecationPatterns();
+      } catch (e) {
+        alert('Failed to toggle: ' + e.message);
+      }
+    }
+
+    async function deleteVersionCheck(index) {
+      if (!confirm('Delete this version check?')) return;
+      try {
+        await fetch(`${API_BASE}/api/rules/config/version-checks/${index}`, { method: 'DELETE' });
+        rulesConfig.versionChecks.splice(index, 1);
+        renderVersionChecks();
+      } catch (e) {
+        alert('Failed to delete: ' + e.message);
+      }
+    }
+
+    async function deleteDeprecationPattern(index) {
+      if (!confirm('Delete this deprecation pattern?')) return;
+      try {
+        await fetch(`${API_BASE}/api/rules/config/deprecation-patterns/${index}`, { method: 'DELETE' });
+        rulesConfig.deprecationPatterns.splice(index, 1);
+        renderDeprecationPatterns();
+      } catch (e) {
+        alert('Failed to delete: ' + e.message);
+      }
+    }
+
+    function addVersionCheck() {
+      const name = prompt('Technology name (e.g., "Python"):');
+      if (!name) return;
+      const pattern = prompt('Regex pattern (e.g., "\\\\bpython\\\\s+(\\\\d+)"):');
+      if (!pattern) return;
+      const version = prompt('Current version (e.g., "3.12"):');
+      if (!version) return;
+      
+      addVersionCheckFromTemplate(name, pattern, version);
+    }
+
+    async function addVersionCheckFromTemplate(name, pattern, version) {
+      // Check if already exists
+      if (rulesConfig.versionChecks.some(v => v.name === name)) {
+        alert(`${name} version check already exists`);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/config/version-checks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, pattern, currentVersion: version, enabled: true })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        rulesConfig = data.config;
+        renderVersionChecks();
+      } catch (e) {
+        alert('Failed to add: ' + e.message);
+      }
+    }
+
+    function addDeprecationPattern() {
+      const name = prompt('Pattern name (e.g., "var-usage"):');
+      if (!name) return;
+      const pattern = prompt('Regex pattern:');
+      if (!pattern) return;
+      const reason = prompt('Why is this deprecated?');
+      if (!reason) return;
+      const suggestion = prompt('Suggested alternative (optional):');
+      
+      addDeprecationFromTemplate(name, pattern, reason, suggestion);
+    }
+
+    async function addDeprecationFromTemplate(name, pattern, reason, suggestion = '') {
+      // Check if already exists
+      if (rulesConfig.deprecationPatterns.some(d => d.name === name)) {
+        alert(`${name} deprecation pattern already exists`);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/config/deprecation-patterns`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, pattern, reason, suggestion, enabled: true })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        rulesConfig = data.config;
+        renderDeprecationPatterns();
+      } catch (e) {
+        alert('Failed to add: ' + e.message);
+      }
+    }
+
+    async function saveRulesConfig() {
+      // Update config from form
+      rulesConfig.analysis.duplicateThreshold = parseFloat(document.getElementById('rules-duplicate-threshold').value);
+      rulesConfig.analysis.maxAgeDays = parseInt(document.getElementById('rules-max-age-days').value);
+      rulesConfig.analysis.oldYearThreshold = parseInt(document.getElementById('rules-old-year-threshold').value);
+      rulesConfig.analysis.detectConflicts = document.getElementById('rules-detect-conflicts').checked;
+      rulesConfig.analysis.detectOutdated = document.getElementById('rules-detect-outdated').checked;
+      rulesConfig.analysis.useLLM = document.getElementById('rules-use-llm').checked;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/rules/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rulesConfig)
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        alert('Rules configuration saved!');
+      } catch (e) {
+        alert('Failed to save: ' + e.message);
+      }
+    }
+
+    // Load rules config when settings tab is shown
+    const originalShowTab = showTab;
+    showTab = function(tabId) {
+      originalShowTab(tabId);
+      if (tabId === 'settings' && !rulesConfig) {
+        loadRulesConfig();
+      }
+    };
+    // ==================== END RULES ANALYZER CONFIGURATION ====================
 
     // Initial load
     fetchConfig().then(() => {

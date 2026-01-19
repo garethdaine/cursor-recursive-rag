@@ -59,11 +59,12 @@ The paper's Appendix A provides critical anti-patterns we must avoid:
 7. [Phase 6: Background Maintenance Jobs](#phase-6-maintenance)
 8. [Phase 7: Enhanced Retrieval Scoring](#phase-7-retrieval)
 9. [Phase 8: RLM-Style Recursive Retrieval](#phase-8-rlm-retrieval)
-10. [Database Schema](#database-schema)
-11. [MCP Tool Definitions](#mcp-tools)
-12. [Configuration Schema](#configuration)
-13. [Anti-Patterns and Negative Results](#anti-patterns)
-14. [Testing Strategy](#testing)
+10. [Phase 12: PageIndex Integration (Vectorless RAG)](#phase-12-pageindex)
+11. [Database Schema](#database-schema)
+12. [MCP Tool Definitions](#mcp-tools)
+13. [Configuration Schema](#configuration)
+14. [Anti-Patterns and Negative Results](#anti-patterns)
+15. [Testing Strategy](#testing)
 
 ---
 
@@ -3593,6 +3594,299 @@ interface ChunkingResult {
 - [ ] Keyword chunking filters by patterns
 - [ ] Structural chunking groups by source
 - [ ] Adaptive chunking chooses appropriate strategy
+
+---
+
+## Phase 12: PageIndex Integration (Vectorless RAG) {#phase-12-pageindex}
+
+### Overview
+
+This phase integrates [PageIndex](https://github.com/VectifyAI/PageIndex) - a vectorless, reasoning-based RAG system that builds hierarchical tree indexes from documents and uses LLM reasoning for retrieval. This complements the existing vector-based retrieval system.
+
+### Key Insight: Complementary Approaches
+
+Vector RAG and PageIndex solve retrieval differently and work together:
+
+| Aspect | Vector RAG | PageIndex |
+|--------|-----------|-----------|
+| **Excels at** | Semantic similarity, cross-document search | Structured documents, preserving hierarchy |
+| **Retrieval method** | Embed query → Top-K similarity | LLM navigates tree → Returns node IDs |
+| **Storage** | Vector DB (Redis/Qdrant/Chroma) | JSON file (tree structure) |
+| **Index type** | Flat vector embeddings | Hierarchical tree with node IDs |
+| **Explainability** | Similarity scores | Page references, reasoning chain |
+
+### Integration Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Cursor Recursive RAG                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐     ┌──────────────────────────────┐  │
+│  │  Ingest Router  │────▶│ Document Type Detector       │  │
+│  └─────────────────┘     └──────────────────────────────┘  │
+│           │                        │                        │
+│           ▼                        ▼                        │
+│  ┌─────────────────┐     ┌──────────────────────────────┐  │
+│  │ Vector Pipeline │     │   PageIndex Pipeline (NEW)   │  │
+│  │  (existing)     │     │                              │  │
+│  │ ┌─────────────┐ │     │ ┌──────────────────────────┐ │  │
+│  │ │  Chunker    │ │     │ │ PageIndex Tree Builder   │ │  │
+│  │ ├─────────────┤ │     │ ├──────────────────────────┤ │  │
+│  │ │  Embedder   │ │     │ │ Tree Storage (JSON/DB)   │ │  │
+│  │ ├─────────────┤ │     │ ├──────────────────────────┤ │  │
+│  │ │ Vector Store│ │     │ │ LLM Tree Traversal       │ │  │
+│  │ └─────────────┘ │     │ └──────────────────────────┘ │  │
+│  └─────────────────┘     └──────────────────────────────┘  │
+│           │                        │                        │
+│           └────────────┬───────────┘                        │
+│                        ▼                                    │
+│              ┌──────────────────┐                           │
+│              │  Hybrid Merger   │                           │
+│              │  (combines both) │                           │
+│              └──────────────────┘                           │
+│                        │                                    │
+│                        ▼                                    │
+│              ┌──────────────────┐                           │
+│              │ RecursiveQuery   │                           │
+│              │    Tool          │                           │
+│              └──────────────────┘                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### New Components
+
+#### PageIndex Adapter (`src/adapters/pageindex/`)
+
+```
+src/adapters/pageindex/
+├── index.ts           # Factory and exports
+├── types.ts           # PageIndex tree node types
+├── tree-builder.ts    # Wraps PageIndex Python via child_process
+├── tree-store.ts      # Stores/retrieves tree JSON
+└── tree-searcher.ts   # LLM-based tree traversal for retrieval
+```
+
+#### Key Interfaces
+
+```typescript
+/**
+ * PageIndex tree node structure (mirrors Python output)
+ */
+export interface TreeNode {
+  title: string;
+  node_id: string;
+  start_index: number;  // Start page
+  end_index: number;    // End page
+  summary: string;
+  nodes?: TreeNode[];   // Child nodes
+}
+
+/**
+ * Complete tree index for a document
+ */
+export interface TreeIndex {
+  documentId: string;
+  sourcePath: string;
+  documentDescription?: string;
+  createdAt: Date;
+  model: string;
+  nodes: TreeNode[];
+}
+
+/**
+ * PageIndex search result
+ */
+export interface PageIndexResult {
+  nodeId: string;
+  title: string;
+  content: string;
+  startPage: number;
+  endPage: number;
+  summary: string;
+  reasoningChain: string[];  // How LLM navigated to this node
+  confidence: number;
+}
+
+/**
+ * PageIndex adapter interface
+ */
+export interface PageIndexAdapter {
+  // Build tree from document
+  buildIndex(
+    sourcePath: string,
+    options?: PageIndexOptions
+  ): Promise<TreeIndex>;
+  
+  // Search using LLM reasoning
+  search(
+    query: string,
+    treeIndex: TreeIndex
+  ): Promise<PageIndexResult[]>;
+  
+  // Get full content for nodes
+  getNodeContent(
+    treeIndex: TreeIndex,
+    nodeIds: string[]
+  ): Promise<string[]>;
+}
+```
+
+### Configuration Extension
+
+Add to `RAGConfig` in `src/types/index.ts`:
+
+```typescript
+export interface RAGConfig {
+  // ... existing fields ...
+  
+  pageIndex?: {
+    enabled: boolean;
+    pythonPath?: string;        // Path to Python with pageindex installed
+    model?: string;             // OpenAI model for tree building (default: gpt-4o-mini)
+    maxPagesPerNode?: number;   // Default: 10
+    maxTokensPerNode?: number;  // Default: 20000
+    useCachedTrees?: boolean;   // Cache built trees (default: true)
+    autoIndexPDFs?: boolean;    // Auto-build tree for PDFs (default: true)
+    hybridSearchWeight?: number; // Weight for PageIndex in hybrid (0-1, default: 0.5)
+  };
+}
+```
+
+### New MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `pageindex_ingest` | Build a PageIndex tree for a PDF/markdown document |
+| `pageindex_search` | Query using hierarchical tree navigation |
+| `pageindex_list` | List all indexed documents with tree structure |
+| `hybrid_search` | Combine vector + PageIndex results |
+
+### Hybrid Search Service
+
+```typescript
+/**
+ * Hybrid Search Merger
+ * Combines results from vector search and PageIndex
+ */
+export async function hybridSearch(
+  query: string,
+  vectorStore: VectorStore,
+  pageIndexAdapter: PageIndexAdapter,
+  options: HybridSearchOptions
+): Promise<HybridSearchResult> {
+  // Run both searches in parallel
+  const [vectorResults, pageIndexResults] = await Promise.all([
+    vectorStore.search(embedding, { topK: options.vectorTopK }),
+    pageIndexAdapter.search(query, treeIndex)
+  ]);
+  
+  // Merge with configurable weighting
+  return mergeResults(vectorResults, pageIndexResults, options.weights);
+}
+
+interface HybridSearchResult {
+  results: Array<{
+    id: string;
+    content: string;
+    score: number;
+    source: 'vector' | 'pageindex';
+    pageReference?: string;  // For PageIndex results
+  }>;
+  vectorResultCount: number;
+  pageIndexResultCount: number;
+  mergedCount: number;
+}
+```
+
+### Usage Example
+
+**Ingesting a PDF:**
+```bash
+cursor-rag ingest --source ./report.pdf
+
+[Vector Pipeline] Created 247 chunks → stored in Redis
+[PageIndex Pipeline] Built tree with 23 nodes → stored in ~/.cursor-rag/pageindex/report.json
+```
+
+**Querying:**
+```
+User: "What were Q3 revenue figures?"
+
+[Hybrid Search]
+├── Vector: Found 5 chunks with 0.82 avg similarity
+└── PageIndex: Tree traversal found nodes 0012, 0015 (Financial Results section)
+
+[Merged Result]
+Sources:
+- report.pdf, pages 21-23 (PageIndex)
+- report.pdf, chunk 145 (Vector)
+```
+
+### Python Integration
+
+Since PageIndex is Python-based, the recommended integration approach is via child process:
+
+```typescript
+import { spawn } from 'child_process';
+
+async function buildPageIndexTree(
+  pdfPath: string,
+  options: PageIndexOptions
+): Promise<TreeIndex> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      'run_pageindex.py',
+      '--pdf_path', pdfPath,
+      '--model', options.model || 'gpt-4o-mini',
+      '--max-pages-per-node', String(options.maxPagesPerNode || 10),
+      '--max-tokens-per-node', String(options.maxTokensPerNode || 20000),
+    ];
+    
+    const proc = spawn(options.pythonPath || 'python3', args, {
+      cwd: options.pageindexPath,
+      env: { ...process.env, CHATGPT_API_KEY: options.apiKey },
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    proc.stdout.on('data', (data) => { stdout += data; });
+    proc.stderr.on('data', (data) => { stderr += data; });
+    
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve(JSON.parse(stdout));
+      } else {
+        reject(new Error(`PageIndex failed: ${stderr}`));
+      }
+    });
+  });
+}
+```
+
+### Benefits of This Integration
+
+1. **Additive, not replacement** - existing vector functionality unchanged
+2. **Best of both worlds** - semantic search + structural navigation
+3. **Explainable results** - PageIndex provides exact page references
+4. **Configurable** - users can enable/disable PageIndex per their needs
+5. **Document-type aware** - automatically uses best strategy per document
+
+### Considerations
+
+| Factor | Notes |
+|--------|-------|
+| **API Cost** | PageIndex uses LLM calls for both indexing and retrieval |
+| **Latency** | Tree building is slower than chunking (but only at ingest time) |
+| **Python dependency** | Requires Python 3.x with pageindex package installed |
+| **Storage** | Tree indexes are JSON files (~10-100KB per document) |
+
+### Implementation Phases
+
+1. **Phase 1: Core Integration** - Adapter, storage, basic search
+2. **Phase 2: Hybrid Search** - Merge with vector results, attribution
+3. **Phase 3: Enhanced Features** - CLI, dashboard, auto-detection
 
 ---
 

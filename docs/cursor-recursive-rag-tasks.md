@@ -991,6 +991,182 @@ Document testing strategy and generate coverage reports.
 
 ---
 
+## Epic: Phase 12 - PageIndex Integration (Vectorless RAG)
+
+*Complementary retrieval using hierarchical tree indexes based on [PageIndex](https://github.com/VectifyAI/PageIndex)*
+
+**Key Insight**: Vector RAG and PageIndex solve retrieval differently and work together:
+- **Vector RAG excels at**: Semantic similarity, cross-document search, finding related concepts
+- **PageIndex excels at**: Structured documents (PDFs, reports), preserving document hierarchy, explainable retrieval with page references
+
+### CRR-1201: Define PageIndex Types
+**Estimate**: 2 points
+**Labels**: pageindex, types
+
+Define TypeScript types for PageIndex tree structures and operations.
+
+**File**: `src/adapters/pageindex/types.ts`
+
+**Acceptance Criteria**:
+- [ ] TreeNode interface (title, node_id, start_index, end_index, summary, nodes)
+- [ ] TreeIndex interface (document metadata + root nodes)
+- [ ] PageIndexResult interface (node IDs, content, page references)
+- [ ] PageIndexConfig interface (model, maxPagesPerNode, maxTokensPerNode)
+- [ ] PageIndexAdapter interface (buildIndex, search, getNodeContent)
+
+---
+
+### CRR-1202: Implement Tree Builder Adapter
+**Estimate**: 4 points
+**Labels**: pageindex, adapter
+**Blocked by**: CRR-1201, CRR-1000
+
+Create adapter that wraps PageIndex Python via child_process.
+
+**File**: `src/adapters/pageindex/tree-builder.ts`
+
+**Acceptance Criteria**:
+- [ ] Spawns Python process with pageindex package
+- [ ] Passes PDF/markdown path and config options
+- [ ] Parses JSON tree output
+- [ ] Handles Python errors gracefully
+- [ ] Caches built trees to avoid re-processing
+- [ ] Supports both PDF and markdown input
+
+---
+
+### CRR-1203: Implement Tree Storage
+**Estimate**: 2 points
+**Labels**: pageindex, storage
+**Blocked by**: CRR-1201
+
+Store and retrieve PageIndex tree structures.
+
+**File**: `src/adapters/pageindex/tree-store.ts`
+
+**Acceptance Criteria**:
+- [ ] Save tree JSON to ~/.cursor-rag/pageindex/
+- [ ] Retrieve tree by document ID/path
+- [ ] List all indexed documents with tree metadata
+- [ ] Delete tree when source document removed
+- [ ] Verify tree freshness against source modification time
+
+---
+
+### CRR-1204: Implement Tree Searcher
+**Estimate**: 4 points
+**Labels**: pageindex, retrieval
+**Blocked by**: CRR-1201, CRR-1203, CRR-1000
+
+LLM-based tree traversal for retrieval.
+
+**File**: `src/adapters/pageindex/tree-searcher.ts`
+
+**Acceptance Criteria**:
+- [ ] Uses LLM to navigate tree hierarchy
+- [ ] Returns relevant node IDs with reasoning
+- [ ] Fetches full content for selected nodes
+- [ ] Includes page references in results
+- [ ] Supports multi-step tree navigation
+- [ ] Tracks reasoning chain for explainability
+
+---
+
+### CRR-1205: Implement Hybrid Search Merger
+**Estimate**: 3 points
+**Labels**: pageindex, retrieval
+**Blocked by**: CRR-1204
+
+Merge results from vector search and PageIndex.
+
+**File**: `src/services/hybridSearchMerger.ts`
+
+**Acceptance Criteria**:
+- [ ] Run vector and PageIndex searches in parallel
+- [ ] Configurable weighting between sources
+- [ ] Deduplicate overlapping results
+- [ ] Preserve source attribution (vector vs PageIndex)
+- [ ] Include page references for PageIndex results
+- [ ] Score normalization across retrieval methods
+
+---
+
+### CRR-1206: Add PageIndex MCP Tools
+**Estimate**: 3 points
+**Labels**: pageindex, mcp
+**Blocked by**: CRR-1202, CRR-1204, CRR-1205
+
+New MCP tools for PageIndex operations.
+
+**File**: `src/server/tools/pageindex.ts`
+
+**Acceptance Criteria**:
+- [ ] `pageindex_ingest` - Build tree for PDF/markdown
+- [ ] `pageindex_search` - Query using tree navigation
+- [ ] `pageindex_list` - List indexed documents with tree info
+- [ ] `hybrid_search` - Combined vector + PageIndex search
+- [ ] All tools have proper input validation
+- [ ] Results include source and page references
+
+---
+
+### CRR-1207: Add PageIndex CLI Commands
+**Estimate**: 2 points
+**Labels**: pageindex, cli
+**Blocked by**: CRR-1202, CRR-1203, CRR-1204
+
+CLI commands for PageIndex management.
+
+**File**: `src/cli/commands/pageindex.ts`
+
+**Acceptance Criteria**:
+- [ ] `cursor-rag pageindex build <path>` - Build tree index
+- [ ] `cursor-rag pageindex list` - List indexed documents
+- [ ] `cursor-rag pageindex search <query>` - Search with tree navigation
+- [ ] `cursor-rag pageindex info <document>` - Show tree structure
+- [ ] `cursor-rag pageindex remove <document>` - Remove tree index
+- [ ] Progress display during tree building
+
+---
+
+### CRR-1208: Dashboard PageIndex Integration
+**Estimate**: 3 points
+**Labels**: pageindex, dashboard
+**Blocked by**: CRR-1206, CRR-903
+
+Add PageIndex features to web dashboard.
+
+**File**: `src/dashboard/public/index.html`, `src/dashboard/server.ts`
+
+**Acceptance Criteria**:
+- [ ] PageIndex tab showing indexed documents
+- [ ] Tree structure visualization
+- [ ] Search mode toggle (Vector / PageIndex / Hybrid)
+- [ ] Results show source type and page references
+- [ ] Build tree from uploaded PDF
+- [ ] Tree node expansion/collapse
+
+---
+
+### CRR-1209: Auto-Detection and Routing
+**Estimate**: 2 points
+**Labels**: pageindex, ingest
+**Blocked by**: CRR-1202, CRR-1205
+
+Automatically route documents to appropriate pipeline.
+
+**File**: `src/server/tools/ingest.ts` (modification)
+
+**Acceptance Criteria**:
+- [ ] Detect document type (PDF, markdown, text, URL)
+- [ ] PDFs automatically get PageIndex tree + vector embeddings
+- [ ] Structured markdown gets PageIndex tree + vector embeddings
+- [ ] Plain text/URLs only use vector pipeline
+- [ ] Configuration to override auto-detection
+- [ ] Progress reporting for dual-pipeline ingestion
+
+---
+
 ## Summary
 
 | Epic | Tasks | Total Points |
@@ -1006,7 +1182,8 @@ Document testing strategy and generate coverage reports.
 | Phase 9: Dashboard Tools UI | 4 | 11 |
 | Phase 10: Rules Optimizer | 8 | 28 |
 | Phase 11: Test Suite | 13 | 44 |
-| **Total** | **48** | **149** |
+| Phase 12: PageIndex Integration | 9 | 25 |
+| **Total** | **57** | **174** |
 
 ---
 
@@ -1102,13 +1279,31 @@ CRR-1106 + CRR-1107 + CRR-1108 + CRR-1109 + CRR-1110 ──── CRR-1111 (E2E:
                                     │
 All tests (CRR-1102 through CRR-1112) ──── CRR-1113 (Documentation)
 
+Phase 12: PageIndex Integration (Vectorless RAG complement)
+CRR-1201 (Types) ──── CRR-1202 (Tree Builder) ──── CRR-1203 (Tree Storage)
+                                │
+                                └── CRR-1204 (Tree Searcher) ──── CRR-1205 (Hybrid Merger)
+                                                                        │
+                                                                        └── CRR-1206 (MCP Tools)
+                                                                                │
+CRR-1000 (LLM Provider) ──────────────────────────────────────────────────────────┘
+                                                                                │
+                                                                CRR-1207 (CLI Commands)
+                                                                        │
+                                                        CRR-1208 (Dashboard Integration)
+                                                                        │
+                                                                CRR-1209 (Auto-Detection)
+
 Notes:
 - Phase 8 (RLM) depends on CRR-701 (Hybrid Scorer)
 - Phase 9 (Dashboard Tools) is independent, can start anytime
 - Phase 10 (Rules Optimizer) is independent, can start anytime
 - Phase 11 (Test Suite) is independent, can start anytime - tests existing code
+- Phase 12 (PageIndex) is independent, can start anytime - complements vector RAG
 - CRR-1000 (LLM Provider) enables all LLM-dependent features across the system
 - CRR-1004 depends on CRR-1000 + CRR-1003 for LLM-powered merging
 - CRR-1007 depends on CRR-903 (Tools UI Panel) for dashboard integration
 - CRR-1101 (Test Infrastructure) should be done first in Phase 11
+- CRR-1204 and CRR-1206 depend on CRR-1000 (LLM Provider) for tree traversal
+- CRR-1208 depends on CRR-903 (Dashboard Tools UI) for integration
 ```

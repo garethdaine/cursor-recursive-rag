@@ -4,6 +4,7 @@ import { QdrantAdapter } from './qdrant.js';
 import { VectorizeAdapter } from './vectorize.js';
 import { MemoryAdapter } from './memory.js';
 import { RedisAdapter } from './redis.js';
+import { RedisNativeAdapter } from './redis-native.js';
 import type { RAGConfig } from '../../types/index.js';
 
 export { VectorStore, VectorDocument, SearchResult, SearchOptions };
@@ -17,6 +18,13 @@ export function createVectorStore(type: string, config: RAGConfig): VectorStore 
     case 'qdrant':
       return new QdrantAdapter(config);
     case 'redis':
+      // Use native Redis 8.x adapter by default, fall back to RediSearch if specified
+      if (config.vectorStoreConfig?.useRediSearch) {
+        return new RedisAdapter(config);
+      }
+      return new RedisNativeAdapter(config);
+    case 'redis-stack':
+      // Explicit Redis Stack/RediSearch adapter
       return new RedisAdapter(config);
     case 'vectorize':
       return new VectorizeAdapter(config);

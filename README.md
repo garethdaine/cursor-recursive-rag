@@ -12,11 +12,12 @@ Recursive RAG MCP server for Cursor IDE with interactive setup wizard and web da
 ## Features
 
 - **Recursive Query**: Multi-hop retrieval with query decomposition and iterative refinement
-- **Configurable Vector Stores**: Redis Stack (recommended), Qdrant (local/cloud), ChromaDB, Cloudflare Vectorize
+- **Configurable Vector Stores**: Redis Stack (Docker), Redis 8.x Native (Homebrew), Qdrant (local/cloud), ChromaDB, Cloudflare Vectorize
 - **Configurable Embeddings**: Local (Xenova/transformers.js), OpenAI, Ollama
 - **Web Crawling**: Firecrawl integration for documentation ingestion
 - **Rotating Proxy Support**: Optional PacketStream/SmartProxy integration for URL fetching
-- **Web Dashboard**: Real-time monitoring, search, and configuration UI (Tailwind CSS)
+- **Web Dashboard**: Real-time monitoring, search, activity logging, and configuration UI (Tailwind CSS)
+- **Activity Logging**: Persistent activity log across MCP tools and dashboard (stored in `~/.cursor-rag/activity.json`)
 - **Interactive Setup**: Guided configuration wizard
 - **MCP Integration**: Automatic registration with Cursor IDE
 - **MCP Gateway Integration**: Connect to [MCP Gateway](https://github.com/abdullah1854/MCPGateway) for 87+ aggregated tools with token optimization
@@ -69,12 +70,13 @@ npm link  # Makes cursor-rag available globally
 
 Run `cursor-rag setup` to configure the system. The wizard will:
 
-1. **Select Vector Store** (Redis recommended):
-   - **Redis Stack** (default): Persistent, fast HNSW search, `docker run -p 6379:6379 redis/redis-stack-server`
+1. **Select Vector Store**:
+   - **Redis Stack** (default): Docker-based with RediSearch module, `docker run -p 6379:6379 redis/redis-stack-server`
+   - **Redis 8.x Native**: Homebrew/native Redis 8.x with VADD/VSIM commands, `brew install redis`
    - **Qdrant**: Persistent, local Docker or cloud, `docker run -p 6333:6333 qdrant/qdrant`
-   - **Memory**: In-process, non-persistent (testing only)
+   - **Memory**: In-process, file-based persistence (testing/development)
    - **ChromaDB**: Requires separate server, `docker run -p 8000:8000 chromadb/chroma`
-   - **Cloudflare Vectorize**: Serverless (not yet implemented)
+   - **Cloudflare Vectorize**: Serverless (requires Cloudflare account)
 
 2. **Select Embedding Model**:
    - **Xenova (local)**: Free, private, ~384 dimensions
@@ -145,10 +147,12 @@ cursor-rag dashboard --port 8080
 ```
 
 The dashboard provides:
-- **Overview**: Total chunks, vector store stats, recent activity
+- **Overview**: Total chunks, vector store stats, MCP Gateway status, OpenSkills count
 - **Search**: Test queries against your knowledge base
-- **Activity Log**: Real-time view of ingestion and search operations
-- **Settings**: Configure vector store, embeddings, and proxy settings
+- **MCP Gateway**: Browse and search 87+ aggregated tools from connected backends
+- **OpenSkills**: Browse and search installed skills
+- **Activity Log**: Persistent activity log showing all searches, ingestions, and crawls (shared with MCP tools)
+- **Settings**: Configure vector store (Redis Stack, Redis 8.x, Qdrant, ChromaDB, etc.), embeddings, and proxy settings
 
 ## Usage in Cursor
 
@@ -191,25 +195,47 @@ Configuration is stored in `~/.cursor-rag/config.json`:
 
 ```json
 {
-  "vectorStore": "chroma",
+  "vectorStore": "redis-stack",
   "embeddings": "xenova",
   "apiKeys": {
-    "firecrawl": "fc-..."
+    "firecrawl": "fc-...",
+    "redis": {
+      "url": "redis://localhost:6379"
+    }
   },
   "proxy": {
-    "enabled": true,
-    "driver": "packetstream",
-    "host": "proxy.packetstream.io",
-    "port": 31112,
-    "username": "your-username",
-    "password": "your-password"
+    "enabled": false,
+    "driver": "none"
   },
   "dashboard": {
     "enabled": true,
     "port": 3333
+  },
+  "mcpGateway": {
+    "enabled": true,
+    "url": "http://localhost:3010"
+  },
+  "openSkills": {
+    "enabled": true,
+    "autoIngestSkills": true
   }
 }
 ```
+
+### Vector Store Options
+
+| Type | Description | Setup |
+|------|-------------|-------|
+| `redis-stack` | Redis Stack with RediSearch module (Docker) | `docker run -d -p 6379:6379 redis/redis-stack-server` |
+| `redis` | Redis 8.x native vectors (Homebrew) | `brew install redis && brew services start redis` |
+| `qdrant` | Qdrant vector database | `docker run -d -p 6333:6333 qdrant/qdrant` |
+| `chroma` | ChromaDB | `docker run -d -p 8000:8000 chromadb/chroma` |
+| `memory` | In-memory with file persistence | No setup required |
+| `vectorize` | Cloudflare Vectorize | Requires Cloudflare account |
+
+### Activity Logging
+
+All operations (searches, ingestions, crawls) are logged to `~/.cursor-rag/activity.json`. This log is shared between the MCP server and dashboard, so activities from Cursor IDE chats will appear in the dashboard's Activity tab.
 
 ### Proxy Configuration
 
@@ -300,7 +326,10 @@ cursor-recursive-rag/
 
 - Node.js >= 20.0.0
 - Cursor IDE (for MCP integration)
-- Optional: Docker (for Qdrant local)
+- One of the following vector stores:
+  - Docker (for Redis Stack, Qdrant, ChromaDB)
+  - Redis 8.x (via Homebrew: `brew install redis`)
+  - Memory adapter (no dependencies, for testing)
 - Optional: Ollama (for local embeddings)
 
 ## API Keys

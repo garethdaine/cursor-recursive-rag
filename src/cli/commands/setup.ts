@@ -75,12 +75,13 @@ async function promptVectorStore(): Promise<string> {
     type: 'list',
     name: 'vectorStore',
     message: 'Select vector store:',
-    default: 'redis',
+    default: 'redis-stack',
     choices: [
-      { name: 'Redis Stack (recommended, persistent) - docker run -p 6379:6379 redis/redis-stack-server', value: 'redis' },
-      { name: 'Qdrant (persistent, local Docker or cloud) - docker run -p 6333:6333 qdrant/qdrant', value: 'qdrant' },
+      { name: 'Redis Stack (Docker, RediSearch) - docker run -p 6379:6379 redis/redis-stack-server', value: 'redis-stack' },
+      { name: 'Redis 8.x Native (Homebrew) - brew install redis', value: 'redis' },
+      { name: 'Qdrant (Docker or cloud) - docker run -p 6333:6333 qdrant/qdrant', value: 'qdrant' },
       { name: 'Memory (in-process, non-persistent, testing only)', value: 'memory' },
-      { name: 'ChromaDB (requires separate server) - docker run -p 8000:8000 chromadb/chroma', value: 'chroma' },
+      { name: 'ChromaDB (requires server) - docker run -p 8000:8000 chromadb/chroma', value: 'chroma' },
       { name: 'Cloudflare Vectorize (serverless, requires Cloudflare account)', value: 'vectorize' }
     ]
   }]);

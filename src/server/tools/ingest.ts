@@ -4,6 +4,7 @@ import type { VectorStore } from '../../adapters/vector/index.js';
 import type { Embedder } from '../../adapters/embeddings/index.js';
 import type { RAGConfig, VectorDocument } from '../../types/index.js';
 import { chunkDocument } from '../../services/chunker.js';
+import { logActivity } from '../../services/activity-log.js';
 
 interface IngestDocumentArgs {
   source: string;
@@ -87,6 +88,11 @@ export async function ingestDocumentTool(
   }));
 
   await vectorStore.add(documents);
+
+  logActivity('ingest', `Ingested: "${title || docSource}"`, {
+    chunksCreated: documents.length,
+    source: docSource
+  });
 
   return {
     content: [

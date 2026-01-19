@@ -317,12 +317,32 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm text-gray-400 mb-2">Type</label>
-                <select id="config-vectorstore" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                <select id="config-vectorstore" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2" onchange="toggleVectorStoreConfig()">
+                  <option value="redis-stack">Redis Stack (Docker/RediSearch)</option>
+                  <option value="redis">Redis 8.x Native (Homebrew)</option>
                   <option value="memory">Memory (File-based)</option>
                   <option value="chroma">ChromaDB (Server)</option>
                   <option value="qdrant">Qdrant</option>
                   <option value="vectorize">Cloudflare Vectorize</option>
                 </select>
+              </div>
+              <div id="redis-stack-config" class="hidden">
+                <label class="block text-sm text-gray-400 mb-2">Redis Stack URL</label>
+                <input type="text" id="config-redis-stack-url" placeholder="redis://localhost:6379" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                <p class="text-xs text-gray-500 mt-1">Requires Redis Stack with RediSearch module (Docker recommended)</p>
+              </div>
+              <div id="redis-config" class="hidden">
+                <label class="block text-sm text-gray-400 mb-2">Redis URL</label>
+                <input type="text" id="config-redis-url" placeholder="redis://localhost:6379" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+                <p class="text-xs text-gray-500 mt-1">Uses Redis 8.x native vector commands (VADD/VSIM)</p>
+              </div>
+              <div id="chroma-config" class="hidden">
+                <label class="block text-sm text-gray-400 mb-2">ChromaDB URL</label>
+                <input type="text" id="config-chroma-url" placeholder="http://localhost:8000" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
+              </div>
+              <div id="qdrant-config" class="hidden">
+                <label class="block text-sm text-gray-400 mb-2">Qdrant URL</label>
+                <input type="text" id="config-qdrant-url" placeholder="http://localhost:6333" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
               </div>
             </div>
           </div>
@@ -678,6 +698,15 @@
       }
     }
 
+    // Toggle vector store config fields visibility
+    function toggleVectorStoreConfig() {
+      const vectorStore = document.getElementById('config-vectorstore').value;
+      document.getElementById('redis-stack-config').classList.toggle('hidden', vectorStore !== 'redis-stack');
+      document.getElementById('redis-config').classList.toggle('hidden', vectorStore !== 'redis');
+      document.getElementById('chroma-config').classList.toggle('hidden', vectorStore !== 'chroma');
+      document.getElementById('qdrant-config').classList.toggle('hidden', vectorStore !== 'qdrant');
+    }
+
     // Fetch Config
     async function fetchConfig() {
       try {
@@ -688,6 +717,25 @@
         
         document.getElementById('config-vectorstore').value = config.vectorStore || 'memory';
         document.getElementById('config-embeddings').value = config.embeddings || 'xenova';
+        
+        // Vector store specific configs
+        // For redis-stack, use same redis URL field
+        if (config.apiKeys?.redis?.url) {
+          if (config.vectorStore === 'redis-stack') {
+            document.getElementById('config-redis-stack-url').value = config.apiKeys.redis.url;
+          } else {
+            document.getElementById('config-redis-url').value = config.apiKeys.redis.url;
+          }
+        }
+        if (config.vectorStoreConfig?.chromaUrl) {
+          document.getElementById('config-chroma-url').value = config.vectorStoreConfig.chromaUrl;
+        }
+        if (config.apiKeys?.qdrant?.url) {
+          document.getElementById('config-qdrant-url').value = config.apiKeys.qdrant.url;
+        }
+        
+        // Show/hide vector store config fields
+        toggleVectorStoreConfig();
         
         if (config.mcpGateway) {
           document.getElementById('config-gateway-enabled').checked = config.mcpGateway.enabled;
@@ -712,9 +760,17 @@
 
     // Save Settings
     async function saveSettings() {
+      const vectorStore = document.getElementById('config-vectorstore').value;
+      const redisStackUrl = document.getElementById('config-redis-stack-url').value;
+      const redisUrl = document.getElementById('config-redis-url').value;
+      const chromaUrl = document.getElementById('config-chroma-url').value;
+      const qdrantUrl = document.getElementById('config-qdrant-url').value;
+      
       const updates = {
-        vectorStore: document.getElementById('config-vectorstore').value,
+        vectorStore: vectorStore,
         embeddings: document.getElementById('config-embeddings').value,
+        apiKeys: {},
+        vectorStoreConfig: {},
         mcpGateway: {
           enabled: document.getElementById('config-gateway-enabled').checked,
           url: document.getElementById('config-gateway-url').value || 'http://localhost:3010'
@@ -729,6 +785,20 @@
           host: document.getElementById('config-proxy-host').value || undefined
         }
       };
+      
+      // Add vector store specific config
+      if (vectorStore === 'redis-stack' && redisStackUrl) {
+        updates.apiKeys.redis = { url: redisStackUrl };
+      }
+      if (vectorStore === 'redis' && redisUrl) {
+        updates.apiKeys.redis = { url: redisUrl };
+      }
+      if (vectorStore === 'chroma' && chromaUrl) {
+        updates.vectorStoreConfig.chromaUrl = chromaUrl;
+      }
+      if (vectorStore === 'qdrant' && qdrantUrl) {
+        updates.apiKeys.qdrant = { url: qdrantUrl };
+      }
       
       try {
         const res = await fetch(`${API_BASE}/api/config`, {

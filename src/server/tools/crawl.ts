@@ -4,6 +4,7 @@ import type { VectorStore } from '../../adapters/vector/index.js';
 import type { Embedder } from '../../adapters/embeddings/index.js';
 import type { RAGConfig, VectorDocument } from '../../types/index.js';
 import { chunkDocument } from '../../services/chunker.js';
+import { logActivity } from '../../services/activity-log.js';
 
 interface CrawlAndIngestArgs {
   url: string;
@@ -97,6 +98,11 @@ export async function crawlAndIngestTool(
       await vectorStore.add(batch);
     }
 
+    logActivity('crawl', `Crawled: ${url}`, {
+      pagesIngested: result.data.length,
+      chunksCreated: totalChunks
+    });
+
     return {
       content: [
         {
@@ -106,6 +112,10 @@ export async function crawlAndIngestTool(
       ]
     };
   } catch (error) {
+    logActivity('error', `Crawl failed: ${url}`, {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
     return {
       content: [
         {

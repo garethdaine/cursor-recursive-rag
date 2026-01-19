@@ -46,7 +46,7 @@ export interface OpenSkillsConfig {
 }
 
 export interface RAGConfig {
-  vectorStore: 'memory' | 'chroma' | 'qdrant' | 'redis' | 'vectorize';
+  vectorStore: 'memory' | 'chroma' | 'qdrant' | 'redis' | 'redis-stack' | 'vectorize';
   embeddings: 'xenova' | 'openai' | 'ollama';
   apiKeys?: {
     openai?: string;
@@ -67,6 +67,7 @@ export interface RAGConfig {
     chromaUrl?: string;
     redisUrl?: string;
     vectorDim?: number;
+    useRediSearch?: boolean;
     [key: string]: any;
   };
   proxy?: ProxyConfig;

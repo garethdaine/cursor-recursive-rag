@@ -8,6 +8,7 @@ import { loadConfig, writeConfig, CONFIG_FILE } from '../services/config.js';
 import { createVectorStore } from '../adapters/vector/index.js';
 import { createEmbedder } from '../adapters/embeddings/index.js';
 import { createOpenSkillsClient } from '../integrations/openskills.js';
+import { logActivity as sharedLogActivity, getActivityLog } from '../services/activity-log.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,27 +26,8 @@ interface DashboardStats {
   lastUpdated: string;
 }
 
-interface ActivityLog {
-  timestamp: string;
-  type: 'ingest' | 'search' | 'crawl' | 'error';
-  message: string;
-  details?: Record<string, any>;
-}
-
-// In-memory activity log (would use a proper store in production)
-const activityLog: ActivityLog[] = [];
-
-export function logActivity(type: ActivityLog['type'], message: string, details?: Record<string, any>) {
-  activityLog.unshift({
-    timestamp: new Date().toISOString(),
-    type,
-    message,
-    details
-  });
-  // Keep only last 100 entries
-  if (activityLog.length > 100) {
-    activityLog.pop();
-  }
+export function logActivity(type: 'ingest' | 'search' | 'crawl' | 'error' | 'query', message: string, details?: Record<string, any>) {
+  sharedLogActivity(type, message, details);
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -151,7 +133,8 @@ async function handleAPI(req: IncomingMessage, res: ServerResponse, path: string
     }
 
     if (path === '/api/activity' && req.method === 'GET') {
-      res.end(JSON.stringify(activityLog));
+      const activities = getActivityLog();
+      res.end(JSON.stringify(activities));
       return;
     }
 

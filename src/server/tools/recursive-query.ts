@@ -2,6 +2,7 @@ import type { VectorStore } from '../../adapters/vector/index.js';
 import type { Embedder } from '../../adapters/embeddings/index.js';
 import type { RAGConfig } from '../../types/index.js';
 import { decomposeQuery, generateFollowUps, assessConfidence } from '../../services/query-decomposer.js';
+import { logActivity } from '../../services/activity-log.js';
 
 interface RecursiveQueryArgs {
   query: string;
@@ -83,6 +84,12 @@ export async function recursiveQueryTool(
   const answer = topChunks
     .map((chunk, idx) => `[${idx + 1}] ${chunk.content}`)
     .join('\n\n');
+
+  logActivity('query', `Query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`, {
+    subQuestions: subQuestions.length,
+    retrievalSteps: context.length,
+    chunksFound: uniqueChunks.length
+  });
 
   return {
     content: [

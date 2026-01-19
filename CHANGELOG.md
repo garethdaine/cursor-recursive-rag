@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.2] - 2026-01-19
+
+### Added
+- **Redis Stack Support** - Full RediSearch-based vector adapter for Docker deployments
+  - Uses FT.CREATE for HNSW index creation
+  - Supports hybrid filtering with metadata
+  - Configure with `vectorStore: "redis-stack"`
+- **Redis 8.x Native Support** - Native vector commands for Homebrew Redis
+  - Uses VADD/VSIM commands (no RediSearch required)
+  - Works with standard Redis 8.x installation
+  - Configure with `vectorStore: "redis"`
+- **Persistent Activity Logging** - Shared activity log between MCP server and dashboard
+  - All searches, ingestions, and crawls logged to `~/.cursor-rag/activity.json`
+  - Activity from Cursor IDE chats visible in dashboard Activity tab
+  - File-based persistence survives process restarts
+
+### Changed
+- Dashboard Settings now shows both Redis options with helper text
+- CLI setup wizard updated with Redis Stack and Redis 8.x Native choices
+- Default vector store changed from `redis` to `redis-stack` in CLI
+
+### Fixed
+- Activity log now properly shared between MCP server (stdio) and dashboard (HTTP)
+
 ## [0.2.0-alpha.1] - 2026-01-18
 
 ### Added

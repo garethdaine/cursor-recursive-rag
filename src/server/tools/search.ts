@@ -1,6 +1,7 @@
 import type { VectorStore } from '../../adapters/vector/index.js';
 import type { Embedder } from '../../adapters/embeddings/index.js';
 import type { RAGConfig } from '../../types/index.js';
+import { logActivity } from '../../services/activity-log.js';
 
 interface SearchKnowledgeArgs {
   query: string;
@@ -23,6 +24,12 @@ export async function searchKnowledgeTool(
   }
   
   const results = await vectorStore.search(embedding, searchOptions);
+
+  logActivity('search', `Search: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`, {
+    resultsCount: results.length,
+    topK,
+    sources: sources || []
+  });
 
   const formattedResults = results.map((result: any, idx: number) => 
     `[${idx + 1}] Score: ${result.score.toFixed(4)}\nSource: ${result.metadata.source || 'unknown'}\n${result.content}`

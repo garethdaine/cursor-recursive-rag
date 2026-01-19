@@ -101,3 +101,6 @@ export interface RecursiveQueryResult {
   iterations: number;
   subQuestions: string[];
 }
+
+// Re-export memory types
+export * from './memory.js';
